@@ -68,6 +68,9 @@ struct ProfileEdit: View {
                           .foregroundColor(Color.theme.blackWhiteSecondary)
                     }
                 }
+                NameValue("BMR Equation", description: "formula for base metabolic rate",
+                          $draft.bmrEquation,
+                          options: BMREquation.allCases, control: .picker)
                 // Net Carbs Maximum is the editable ceiling in .keto;
                 // in ratio modes the carb grams are derived, so we
                 // show a read-only target row instead.
@@ -104,10 +107,10 @@ struct ProfileEdit: View {
             Section(header: Text("Gross (without the caloric deficit)")) {
                 Group {
                     NavigationLink(destination: ProfileMetricDetail(metric: .baseMetabolicRate, profile: draft)) {
-                        NameValue("Base Metabolic Rate", description: "Mifflin-St Jeor", $draft.caloriesBaseMetabolicRate, .calorie)
+                        NameValue("Base Metabolic Rate", description: draft.bmrEquation.label, $draft.caloriesBaseMetabolicRate, .calorie)
                     }
                     NavigationLink(destination: ProfileMetricDetail(metric: .restingCalories, profile: draft)) {
-                        NameValue("Resting Calories", description: "Mifflin-St Jeor BMR * 1.2", $draft.caloriesResting, .calorie)
+                        NameValue("Resting Calories", description: "\(draft.bmrEquation.label) BMR × 1.2", $draft.caloriesResting, .calorie)
                     }
                     NavigationLink(destination: ProfileMetricDetail(metric: .activeCaloriesBurned, profile: draft)) {
                         NameValue("Active Calories Burned", description: "daily calories burned due to exercise/movement", $draft.activeCaloriesBurned, .calorie)
@@ -337,20 +340,36 @@ func profileMetricDoc(_ metric: ProfileMetric, profile: Profile) -> ProfileMetri
     switch metric {
 
     case .baseMetabolicRate:
+        let (formula, notes): (String, String)
+        let inputs: [(label: String, value: String)]
+        switch profile.bmrEquation {
+        case .mifflinStJeor:
+            formula = profile.gender == .male
+              ? "Mifflin-St Jeor (male):\n  9.99·weight(kg)\n+ 6.25·height(cm)\n− 4.92·age\n+ 5"
+              : "Mifflin-St Jeor (female):\n  9.99·weight(kg)\n+ 6.25·height(cm)\n− 4.92·age\n− 161"
+            notes = "Mifflin-St Jeor is the modern replacement for Harris-Benedict; ~5% more accurate in non-athletes. Female formula's −161 is conventional; ours uses 4.92·age (Mifflin's published coefficient) rather than the rounded 5."
+            inputs = [
+              ("weight",  "\(profile.bodyMassKg.formattedString(1)) kg"),
+              ("height",  "\(profile.heightCm.formattedString(1)) cm"),
+              ("age",     "\(profile.age.formattedString(1)) yrs"),
+              ("gender",  profile.gender.formattedString(0)),
+            ]
+        case .schofield:
+            formula = "Schofield (\(profile.gender == .male ? "male" : "female"), age-banded):\nBMR = m · weight(kg) + c\n(m, c from the FAO/WHO band for this age & sex)"
+            notes = "Schofield (1985) is the age-banded equation FAO/WHO/UNU adopted and the standard in pediatric dietetics — weight-based (no height term), separate coefficients per age band and sex. For an under-18 these bands track adolescent growth better than Mifflin-St Jeor, which was derived on adults 19–78."
+            inputs = [
+              ("weight",  "\(profile.bodyMassKg.formattedString(1)) kg"),
+              ("age",     "\(profile.age.formattedString(1)) yrs"),
+              ("gender",  profile.gender.formattedString(0)),
+            ]
+        }
         return ProfileMetricDoc(
           title: "Base Metabolic Rate",
           result: cals(profile.caloriesBaseMetabolicRate),
           what: "Calories your body burns at complete rest — what it takes to keep your organs running. Doesn't include any movement, digestion, or exercise.",
-          formula: profile.gender == .male
-            ? "Mifflin-St Jeor (male):\n  9.99·weight(kg)\n+ 6.25·height(cm)\n− 4.92·age\n+ 5"
-            : "Mifflin-St Jeor (female):\n  9.99·weight(kg)\n+ 6.25·height(cm)\n− 4.92·age\n− 161",
-          inputs: [
-            ("weight",  "\(profile.bodyMassKg.formattedString(1)) kg"),
-            ("height",  "\(profile.heightCm.formattedString(1)) cm"),
-            ("age",     "\(profile.age.formattedString(1)) yrs"),
-            ("gender",  profile.gender.formattedString(0)),
-          ],
-          notes: "Mifflin-St Jeor is the modern replacement for Harris-Benedict; ~5% more accurate in non-athletes. Female formula's −161 is conventional; ours uses 4.92·age (Mifflin's published coefficient) rather than the rounded 5."
+          formula: formula,
+          inputs: inputs,
+          notes: notes
         )
 
     case .restingCalories:

@@ -116,6 +116,18 @@ class ProfileMgr: ObservableObject {
             }
         }
 
+        // One-shot: set Caden's BMR equation to Schofield (age-banded,
+        // the pediatric-dietetics choice for a 14-yo). Flag-gated so a
+        // later user change isn't bulldozed.
+        let cadenBmrKey = "didSetCadenSchofield.v1"
+        if !UserDefaults.standard.bool(forKey: cadenBmrKey) {
+            UserDefaults.standard.set(true, forKey: cadenBmrKey)
+            if let i = profiles.firstIndex(where: { $0.name == "Caden" }) {
+                profiles[i].bmrEquation = .schofield
+                if profile.id == profiles[i].id { profile = profiles[i] }
+            }
+        }
+
         // One-shot fix-up for the early-refactor data leak: the
         // per-profile data refactor (commit 3d0ecd0) landed BEFORE
         // the profileName-aware default-meal seeding (commit 9b8bb3e),
@@ -167,7 +179,11 @@ class ProfileMgr: ObservableObject {
             // so a future mode switch back to .keto has a sane starting
             // ceiling). The active math is driven by macroMode.
             netCarbsMaximum: 325,
-            macroMode: .balanced)
+            macroMode: .balanced,
+            // Schofield (age-banded) — Caden is a 14-yo, so the FAO/WHO
+            // 10–18 band is the pediatric-dietetics choice over Mifflin-
+            // St Jeor (which was derived on adults 19–78).
+            bmrEquation: .schofield)
     }
 
 
@@ -327,6 +343,74 @@ enum MacroMode: String, ValueType, Identifiable {
 }
 
 
+// =============================================================
+// BMREquation — selects the basal-metabolic-rate formula for a
+// profile. Mifflin-St Jeor is the adult general-population default;
+// Schofield is the FAO/WHO age-banded equation used in pediatric
+// dietetics (the more defensible choice for under-18s).
+// =============================================================
+enum BMREquation: String, ValueType, Identifiable {
+    case mifflinStJeor
+    case schofield
+
+    var id: String { rawValue }
+    func formattedString(_ precision: Int) -> String { label }
+    func singular() -> Bool { true }
+
+    var label: String {
+        switch self {
+        case .mifflinStJeor: return "Mifflin-St Jeor"
+        case .schofield:     return "Schofield (age-banded)"
+        }
+    }
+
+    // One-line subtitle for the picker / about row.
+    var subtitle: String {
+        switch self {
+        case .mifflinStJeor: return "Adult general-population equation (derived on ages 19–78)."
+        case .schofield:     return "FAO/WHO age-banded equation; the pediatric-dietetics choice for under-18s."
+        }
+    }
+
+    // BMR in kcal/day. weightKg/heightCm are the profile's converted
+    // values; `age` is fractional years; `gender` selects the coefficients.
+    func bmr(weightKg w: Double, heightCm cm: Double, age: Double, gender: Gender) -> Double {
+        switch self {
+        case .mifflinStJeor:
+            // 9.99·kg + 6.25·cm − 4.92·age, then +5 (male) / −161 (female).
+            // The sex constant is ADDED after the age term is subtracted.
+            let base = (w * 9.99) + (cm * 6.25) - (age * 4.92)
+            return gender == .male ? base + 5 : base - 161
+        case .schofield:
+            // Schofield (1985) weight-only equations as adopted by FAO/WHO/UNU.
+            // Whole-year age bands: [0,3) [3,10) [10,18) [18,30) [30,60) [60,∞).
+            let years = Int(age)   // whole-year band (matches the RDA-band convention)
+            let (m, c): (Double, Double)
+            if gender == .male {
+                switch years {
+                case ..<3:    (m, c) = (59.512, -30.4)
+                case 3..<10:  (m, c) = (22.706, 504.3)
+                case 10..<18: (m, c) = (17.686, 658.2)
+                case 18..<30: (m, c) = (15.057, 692.2)
+                case 30..<60: (m, c) = (11.472, 873.1)
+                default:      (m, c) = (11.711, 587.7)
+                }
+            } else {
+                switch years {
+                case ..<3:    (m, c) = (58.317, -31.1)
+                case 3..<10:  (m, c) = (20.315, 485.9)
+                case 10..<18: (m, c) = (13.384, 692.6)
+                case 18..<30: (m, c) = (14.818, 486.6)
+                case 30..<60: (m, c) = (8.126, 845.6)
+                default:      (m, c) = (9.082, 658.5)
+                }
+            }
+            return (m * w) + c
+        }
+    }
+}
+
+
 struct Profile: Codable, Identifiable, Equatable {
     // id + name are new (multi-profile support). Both are filled in
     // on migration of older single-profile JSON via init(from:).
@@ -359,6 +443,10 @@ struct Profile: Codable, Identifiable, Equatable {
     // .keto (preserves prior behavior). Newly added profiles default
     // to .balanced (safer for non-keto humans).
     var macroMode: MacroMode
+    // Which BMR formula drives this profile's energy math. Existing
+    // JSON has no value -> custom decoder defaults to .mifflinStJeor
+    // (preserves prior behavior).
+    var bmrEquation: BMREquation
 
 
     // Memberwise init. The `proteins` subsystem was removed; Codable
@@ -375,6 +463,7 @@ struct Profile: Codable, Identifiable, Equatable {
          calorieDeficit: Int, netCarbsMaximum: Double,
          defaults: [String: Double] = [:],
          macroMode: MacroMode = .keto,
+         bmrEquation: BMREquation = .mifflinStJeor,
          foodMember: [String: String] = [:]) {
         self.id = id
         self.name = name
@@ -391,6 +480,7 @@ struct Profile: Codable, Identifiable, Equatable {
         self.netCarbsMaximum = netCarbsMaximum
         self.defaults = defaults
         self.macroMode = macroMode
+        self.bmrEquation = bmrEquation
         self.foodMember = foodMember
     }
 
@@ -418,6 +508,7 @@ struct Profile: Codable, Identifiable, Equatable {
         self.netCarbsMaximum = try c.decode(Double.self, forKey: .netCarbsMaximum)
         self.defaults = (try? c.decode([String: Double].self, forKey: .defaults)) ?? [:]
         self.macroMode = (try? c.decode(MacroMode.self, forKey: .macroMode)) ?? .keto
+        self.bmrEquation = (try? c.decode(BMREquation.self, forKey: .bmrEquation)) ?? .mifflinStJeor
         self.foodMember = (try? c.decode([String: String].self, forKey: .foodMember)) ?? [:]
     }
 
@@ -618,6 +709,7 @@ struct ProfileMetrics {
     let calorieDeficit: Int
     let netCarbsMaximum: Double
     let macroMode: MacroMode
+    let bmrEquation: BMREquation
 
 
     init(_ p: Profile) {
@@ -631,6 +723,7 @@ struct ProfileMetrics {
         self.calorieDeficit = p.calorieDeficit
         self.netCarbsMaximum = p.netCarbsMaximum
         self.macroMode = p.macroMode
+        self.bmrEquation = p.bmrEquation
     }
 
 
@@ -663,13 +756,13 @@ struct ProfileMetrics {
 
     // ---- Energy ----
 
-    // Mifflin-St Jeor: 9.99·kg + 6.25·cm − 4.92·age, then +5 (male)
-    // or −161 (female). The sex constant is ADDED after the age term
-    // is subtracted — a previous version distributed the minus sign
-    // over it, overstating female BMR by 322 kcal.
+    // BMR now depends on `bmrEquation`: Mifflin-St Jeor (9.99·kg +
+    // 6.25·cm − 4.92·age, then +5 male / −161 female — the sex
+    // constant is ADDED after the age term is subtracted) or the
+    // Schofield age-banded equation. The math lives on the enum;
+    // this delegates to it with the profile's converted inputs.
     var caloriesBaseMetabolicRate: Double {
-        let base = (self.bodyMassKg * 9.99) + (self.heightCm * 6.25) - (self.age * 4.92)
-        return gender == Gender.male ? base + 5 : base - 161
+        bmrEquation.bmr(weightKg: self.bodyMassKg, heightCm: self.heightCm, age: self.age, gender: self.gender)
     }
 
     var caloriesResting: Double {

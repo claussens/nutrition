@@ -33,6 +33,43 @@ final class ProfileMetricsTests: XCTestCase {
         XCTAssertEqual(p.caloriesGoal, (resting + 600) * 0.8, accuracy: 0.01)
     }
 
+    // ---- Schofield (age-banded) BMR ----
+
+    func testDefaultEquationIsMifflin() {
+        XCTAssertEqual(Fixtures.ketoProfile(bodyMass: 220, gender: .male, ageYears: 40).bmrEquation, .mifflinStJeor)
+    }
+
+    func testSchofieldMaleTenToEighteenBand() {
+        var p = Fixtures.ketoProfile(bodyMass: 129, gender: .male, ageYears: 14)
+        p.bmrEquation = .schofield
+        let expected = 17.686 * p.bodyMassKg + 658.2   // age 14 -> [10,18)
+        XCTAssertEqual(p.caloriesBaseMetabolicRate, expected, accuracy: 0.01)
+    }
+
+    func testSchofieldMaleThirtyToSixtyBand() {
+        var p = Fixtures.ketoProfile(bodyMass: 220, gender: .male, ageYears: 40)
+        p.bmrEquation = .schofield
+        let expected = 11.472 * p.bodyMassKg + 873.1   // age 40 -> [30,60)
+        XCTAssertEqual(p.caloriesBaseMetabolicRate, expected, accuracy: 0.01)
+    }
+
+    func testSchofieldFemaleTenToEighteenBand() {
+        var p = Fixtures.ketoProfile(bodyMass: 130, gender: .female, ageYears: 14)
+        p.bmrEquation = .schofield
+        let expected = 13.384 * p.bodyMassKg + 692.6
+        XCTAssertEqual(p.caloriesBaseMetabolicRate, expected, accuracy: 0.01)
+    }
+
+    func testSchofieldBandBoundaryAtEighteen() {
+        var teen = Fixtures.ketoProfile(bodyMass: 150, gender: .male, ageYears: 17)
+        teen.bmrEquation = .schofield
+        XCTAssertEqual(teen.caloriesBaseMetabolicRate, 17.686 * teen.bodyMassKg + 658.2, accuracy: 0.01)
+
+        var adult = Fixtures.ketoProfile(bodyMass: 150, gender: .male, ageYears: 18)
+        adult.bmrEquation = .schofield
+        XCTAssertEqual(adult.caloriesBaseMetabolicRate, 15.057 * adult.bodyMassKg + 692.2, accuracy: 0.01)
+    }
+
     // ---- macroGoals(forCalories:) — keto branch ----
 
     private func metrics(_ p: Profile) -> ProfileMetrics { ProfileMetrics(p) }
