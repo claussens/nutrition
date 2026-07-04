@@ -73,77 +73,14 @@ struct ScanDiff: Equatable {
         addNumberChange(&out, field: "Package grams", id: "packageGrams",
                         old: existing.totalGrams, new: parsed.packageGrams)
 
-        // Macros
-        addNumberChange(&out, field: "Calories", id: "calories",
-                        old: existing.calories, new: parsed.calories)
-        addNumberChange(&out, field: "Fat", id: "fat",
-                        old: existing.fat, new: parsed.fat)
-        addNumberChange(&out, field: "Saturated fat", id: "saturatedFat",
-                        old: existing.saturatedFat, new: parsed.saturatedFat)
-        addNumberChange(&out, field: "Trans fat", id: "transFat",
-                        old: existing.transFat, new: parsed.transFat)
-        addNumberChange(&out, field: "Cholesterol", id: "cholesterol",
-                        old: existing.cholesterol, new: parsed.cholesterol)
-        addNumberChange(&out, field: "Sodium", id: "sodium",
-                        old: existing.sodium, new: parsed.sodium)
-        addNumberChange(&out, field: "Carbohydrates", id: "carbohydrates",
-                        old: existing.carbohydrates, new: parsed.carbohydrates)
-        addNumberChange(&out, field: "Fiber", id: "fiber",
-                        old: existing.fiber, new: parsed.fiber)
-        addNumberChange(&out, field: "Sugar", id: "sugar",
-                        old: existing.sugar, new: parsed.sugar)
-        addNumberChange(&out, field: "Added sugar", id: "addedSugar",
-                        old: existing.addedSugar, new: parsed.addedSugar)
-        addNumberChange(&out, field: "Net carbs", id: "netCarbs",
-                        old: existing.netCarbs, new: parsed.netCarbs)
-        addNumberChange(&out, field: "Protein", id: "protein",
-                        old: existing.protein, new: parsed.protein)
-
-        // V&M
-        addNumberChange(&out, field: "Omega-3", id: "omega3",
-                        old: existing.omega3, new: parsed.omega3)
-        addNumberChange(&out, field: "Vitamin D", id: "vitaminD",
-                        old: existing.vitaminD, new: parsed.vitaminD)
-        addNumberChange(&out, field: "Calcium", id: "calcium",
-                        old: existing.calcium, new: parsed.calcium)
-        addNumberChange(&out, field: "Iron", id: "iron",
-                        old: existing.iron, new: parsed.iron)
-        addNumberChange(&out, field: "Potassium", id: "potassium",
-                        old: existing.potassium, new: parsed.potassium)
-        addNumberChange(&out, field: "Vitamin A", id: "vitaminA",
-                        old: existing.vitaminA, new: parsed.vitaminA)
-        addNumberChange(&out, field: "Vitamin C", id: "vitaminC",
-                        old: existing.vitaminC, new: parsed.vitaminC)
-        addNumberChange(&out, field: "Vitamin E", id: "vitaminE",
-                        old: existing.vitaminE, new: parsed.vitaminE)
-        addNumberChange(&out, field: "Vitamin K", id: "vitaminK",
-                        old: existing.vitaminK, new: parsed.vitaminK)
-        addNumberChange(&out, field: "Thiamin", id: "thiamin",
-                        old: existing.thiamin, new: parsed.thiamin)
-        addNumberChange(&out, field: "Riboflavin", id: "riboflavin",
-                        old: existing.riboflavin, new: parsed.riboflavin)
-        addNumberChange(&out, field: "Niacin", id: "niacin",
-                        old: existing.niacin, new: parsed.niacin)
-        addNumberChange(&out, field: "Vitamin B6", id: "vitaminB6",
-                        old: existing.vitaminB6, new: parsed.vitaminB6)
-        addNumberChange(&out, field: "Folate", id: "folate",
-                        old: existing.folate, new: parsed.folate)
-        addNumberChange(&out, field: "Vitamin B12", id: "vitaminB12",
-                        old: existing.vitaminB12, new: parsed.vitaminB12)
-        addNumberChange(&out, field: "Pantothenic acid", id: "pantothenicAcid",
-                        old: existing.pantothenicAcid, new: parsed.pantothenicAcid)
-        addNumberChange(&out, field: "Phosphorus", id: "phosphorus",
-                        old: existing.phosphorus, new: parsed.phosphorus)
-        addNumberChange(&out, field: "Magnesium", id: "magnesium",
-                        old: existing.magnesium, new: parsed.magnesium)
-        addNumberChange(&out, field: "Zinc", id: "zinc",
-                        old: existing.zinc, new: parsed.zinc)
-        addNumberChange(&out, field: "Selenium", id: "selenium",
-                        old: existing.selenium, new: parsed.selenium)
-        addNumberChange(&out, field: "Copper", id: "copper",
-                        old: existing.copper, new: parsed.copper)
-        addNumberChange(&out, field: "Manganese", id: "manganese",
-                        old: existing.manganese, new: parsed.manganese)
+        // Macros + V&M — one comparison per scannable nutrient in the
+        // catalog (label, id, and both keypaths all come from the
+        // descriptor, so compute() can't drift from apply()).
+        for d in NutrientCatalog.scannable {
+            addNumberChange(&out, field: d.label, id: d.id,
+                            old: existing[keyPath: d.ingredient],
+                            new: parsed[keyPath: d.parsed!])
+        }
 
         return ScanDiff(changes: out)
     }
@@ -233,41 +170,10 @@ struct ScanDiff: Equatable {
             ing.consumptionUnit = p.consumptionUnitEnum
         }
 
-        num("calories", p.calories)     { ing.calories = $0 }
-        num("fat", p.fat)               { ing.fat = $0 }
-        num("saturatedFat", p.saturatedFat)   { ing.saturatedFat = $0 }
-        num("transFat", p.transFat)     { ing.transFat = $0 }
-        num("cholesterol", p.cholesterol)     { ing.cholesterol = $0 }
-        num("sodium", p.sodium)         { ing.sodium = $0 }
-        num("carbohydrates", p.carbohydrates) { ing.carbohydrates = $0 }
-        num("fiber", p.fiber)           { ing.fiber = $0 }
-        num("sugar", p.sugar)           { ing.sugar = $0 }
-        num("addedSugar", p.addedSugar) { ing.addedSugar = $0 }
-        num("netCarbs", p.netCarbs)     { ing.netCarbs = $0 }
-        num("protein", p.protein)       { ing.protein = $0 }
-
-        num("omega3", p.omega3)         { ing.omega3 = $0 }
-        num("vitaminD", p.vitaminD)     { ing.vitaminD = $0 }
-        num("calcium", p.calcium)       { ing.calcium = $0 }
-        num("iron", p.iron)             { ing.iron = $0 }
-        num("potassium", p.potassium)   { ing.potassium = $0 }
-        num("vitaminA", p.vitaminA)     { ing.vitaminA = $0 }
-        num("vitaminC", p.vitaminC)     { ing.vitaminC = $0 }
-        num("vitaminE", p.vitaminE)     { ing.vitaminE = $0 }
-        num("vitaminK", p.vitaminK)     { ing.vitaminK = $0 }
-        num("thiamin", p.thiamin)       { ing.thiamin = $0 }
-        num("riboflavin", p.riboflavin) { ing.riboflavin = $0 }
-        num("niacin", p.niacin)         { ing.niacin = $0 }
-        num("vitaminB6", p.vitaminB6)   { ing.vitaminB6 = $0 }
-        num("folate", p.folate)         { ing.folate = $0 }
-        num("vitaminB12", p.vitaminB12) { ing.vitaminB12 = $0 }
-        num("pantothenicAcid", p.pantothenicAcid) { ing.pantothenicAcid = $0 }
-        num("phosphorus", p.phosphorus) { ing.phosphorus = $0 }
-        num("magnesium", p.magnesium)   { ing.magnesium = $0 }
-        num("zinc", p.zinc)             { ing.zinc = $0 }
-        num("selenium", p.selenium)     { ing.selenium = $0 }
-        num("copper", p.copper)         { ing.copper = $0 }
-        num("manganese", p.manganese)   { ing.manganese = $0 }
+        // Macros + V&M — same catalog rows compute() diffed.
+        for d in NutrientCatalog.scannable {
+            num(d.id, p[keyPath: d.parsed!]) { ing[keyPath: d.ingredient] = $0 }
+        }
     }
 
 

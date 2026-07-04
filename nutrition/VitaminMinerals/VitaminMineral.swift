@@ -41,34 +41,6 @@ struct VitaminMineral: Codable, Identifiable {
     }
 
 
-    // The kebab-case nutrient key used in rda.yaml (and by
-    // ConfigStore.shared.rda()) for each VitaminMineralType case.
-    private static let kebabKey: [VitaminMineralType: String] = [
-        .calcium: "calcium",
-        .copper: "copper",
-        .folate: "folate",
-        .folicAcid: "folic-acid",
-        .iron: "iron",
-        .magnesium: "magnesium",
-        .manganese: "manganese",
-        .niacin: "niacin",
-        .pantothenicAcid: "pantothenic-acid",
-        .phosphorus: "phosphorus",
-        .potassium: "potassium",
-        .riboflavin: "riboflavin",
-        .selenium: "selenium",
-        .thiamin: "thiamin",
-        .vitaminA: "vitamin-a",
-        .vitaminB12: "vitamin-b12",
-        .vitaminB6: "vitamin-b6",
-        .vitaminC: "vitamin-c",
-        .vitaminD: "vitamin-d",
-        .vitaminE: "vitamin-e",
-        .vitaminK: "vitamin-k",
-        .zinc: "zinc",
-    ]
-
-
     // Walk a config RDA/UL threshold list and return the value for
     // this entry's age/gender.  First row whose `age <= maxAge`
     // wins, picking the male/female column — identical lookup
@@ -86,34 +58,25 @@ struct VitaminMineral: Codable, Identifiable {
 
 
     func min() -> Double {
-        guard let key = VitaminMineral.kebabKey[name],
+        guard let key = NutrientCatalog.byVMType[name]?.kebabKey,
               let rda = ConfigStore.shared.rda()[key] else { return 0 }
         return lookup(rda.min)
     }
 
 
     // The unit that min(), max(), and the per-nutrient totals
-    // returned by computeVitaminMineralActuals are expressed in.
-    // NIH publishes copper, folate/folic acid, selenium, vitamin A,
-    // B12, and K in micrograms; vitamin D in International Units;
-    // everything else in milligrams.  computeVitaminMineralActuals
-    // converts ingredient field values into this unit so the row
-    // comparison (min ≤ actual ≤ max) is unit-consistent.
+    // returned by computeVitaminMineralActuals are expressed in —
+    // the descriptor's rdaUnit (the NIH-published unit).
+    // computeVitaminMineralActuals converts ingredient field values
+    // into this unit so the row comparison (min ≤ actual ≤ max) is
+    // unit-consistent.
     func unit() -> Unit {
-        switch name {
-        case .copper, .folate, .folicAcid, .selenium,
-             .vitaminA, .vitaminB12, .vitaminK:
-            return .microgram
-        case .vitaminD:
-            return .internationalUnit
-        default:
-            return .milligram
-        }
+        NutrientCatalog.byVMType[name]?.rdaUnit ?? .milligram
     }
 
 
     func max() -> Double {
-        guard let key = VitaminMineral.kebabKey[name],
+        guard let key = NutrientCatalog.byVMType[name]?.kebabKey,
               let rda = ConfigStore.shared.rda()[key] else { return 0 }
         return lookup(rda.max)
     }

@@ -50,8 +50,9 @@ struct ParsedIngredient: Codable, Equatable {
     let netCarbs: Double?
     let protein: Double?
 
-    // Vitamins & minerals (matches Ingredient field names exactly so
-    // we can iterate by name in the diff)
+    // Vitamins & minerals (matches Ingredient field names exactly;
+    // each has a `parsed:` keypath row in NutrientCatalog, which
+    // drives the tool schema, ScanDiff, and the prefill loops)
     let omega3: Double?
     let vitaminD: Double?
     let calcium: Double?

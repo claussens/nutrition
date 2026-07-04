@@ -39,6 +39,7 @@
 		349EE54427C9A3690072255A /* IngredientList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE54327C9A3690072255A /* IngredientList.swift */; };
 		349EE54B27C9A6B10072255A /* IngredientEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE54A27C9A6B10072255A /* IngredientEdit.swift */; };
 		349EE57227CAB4760072255A /* Ingredient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE57127CAB4760072255A /* Ingredient.swift */; };
+		AB0200000000000000000001 /* NutrientCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0100000000000000000001 /* NutrientCatalog.swift */; };
 		349EE57627CBF3600072255A /* NameValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE57527CBF3600072255A /* NameValue.swift */; };
 		349EE57827CC10E60072255A /* Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE57727CC10E60072255A /* Profile.swift */; };
 		349EE57C27CC823B0072255A /* ProfileEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE57B27CC823B0072255A /* ProfileEdit.swift */; };
@@ -86,6 +87,7 @@
 		AA0200000000000000000003 /* MealResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000003 /* MealResolverTests.swift */; };
 		AA0200000000000000000004 /* ProfileMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000004 /* ProfileMetricsTests.swift */; };
 		AA0200000000000000000005 /* VitaminMineralRDATests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000005 /* VitaminMineralRDATests.swift */; };
+		AB0200000000000000000002 /* NutrientCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0100000000000000000002 /* NutrientCatalogTests.swift */; };
 		AA0200000000000000000006 /* CostMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000006 /* CostMathTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -134,6 +136,7 @@
 		349EE54327C9A3690072255A /* IngredientList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientList.swift; sourceTree = "<group>"; };
 		349EE54A27C9A6B10072255A /* IngredientEdit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientEdit.swift; sourceTree = "<group>"; };
 		349EE57127CAB4760072255A /* Ingredient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ingredient.swift; sourceTree = "<group>"; };
+		AB0100000000000000000001 /* NutrientCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutrientCatalog.swift; sourceTree = "<group>"; };
 		349EE57527CBF3600072255A /* NameValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameValue.swift; sourceTree = "<group>"; };
 		349EE57727CC10E60072255A /* Profile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Profile.swift; sourceTree = "<group>"; };
 		349EE57B27CC823B0072255A /* ProfileEdit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileEdit.swift; sourceTree = "<group>"; };
@@ -180,6 +183,7 @@
 		AA0100000000000000000003 /* MealResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealResolverTests.swift; sourceTree = "<group>"; };
 		AA0100000000000000000004 /* ProfileMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileMetricsTests.swift; sourceTree = "<group>"; };
 		AA0100000000000000000005 /* VitaminMineralRDATests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitaminMineralRDATests.swift; sourceTree = "<group>"; };
+		AB0100000000000000000002 /* NutrientCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutrientCatalogTests.swift; sourceTree = "<group>"; };
 		AA0100000000000000000006 /* CostMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostMathTests.swift; sourceTree = "<group>"; };
 		AA0400000000000000000001 /* nutritionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = nutritionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -262,6 +266,7 @@
 				AA0100000000000000000003 /* MealResolverTests.swift */,
 				AA0100000000000000000004 /* ProfileMetricsTests.swift */,
 				AA0100000000000000000005 /* VitaminMineralRDATests.swift */,
+				AB0100000000000000000002 /* NutrientCatalogTests.swift */,
 				AA0100000000000000000006 /* CostMathTests.swift */,
 			);
 			path = nutritionTests;
@@ -351,6 +356,7 @@
 			isa = PBXGroup;
 			children = (
 				349EE57127CAB4760072255A /* Ingredient.swift */,
+				AB0100000000000000000001 /* NutrientCatalog.swift */,
 				349EE54327C9A3690072255A /* IngredientList.swift */,
 				347A335727DAA1FE005E3F33 /* IngredientAdd.swift */,
 				349EE54A27C9A6B10072255A /* IngredientEdit.swift */,
@@ -568,6 +574,7 @@
 				342CD48F27E25539008703C2 /* View.swift in Sources */,
 				34E3237C28F2542900832D9C /* VitaminMineral.swift in Sources */,
 				349EE57227CAB4760072255A /* Ingredient.swift in Sources */,
+				AB0200000000000000000001 /* NutrientCatalog.swift in Sources */,
 				349EE53327C99AC30072255A /* Tabs.swift in Sources */,
 				FE0500000000000000000002 /* UserDefaultsStore.swift in Sources */,
 				345F5F0A27E0EF1400129BAC /* IngredientRow.swift in Sources */,
@@ -626,6 +633,7 @@
 				AA0200000000000000000003 /* MealResolverTests.swift in Sources */,
 				AA0200000000000000000004 /* ProfileMetricsTests.swift in Sources */,
 				AA0200000000000000000005 /* VitaminMineralRDATests.swift in Sources */,
+				AB0200000000000000000002 /* NutrientCatalogTests.swift in Sources */,
 				AA0200000000000000000006 /* CostMathTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

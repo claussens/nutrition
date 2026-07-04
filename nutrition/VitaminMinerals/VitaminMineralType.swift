@@ -1,7 +1,7 @@
 import Foundation
 
 
-enum VitaminMineralType: ValueType {
+enum VitaminMineralType: ValueType, CaseIterable {
     case calcium
     case copper
     case folate

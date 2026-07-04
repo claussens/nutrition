@@ -88,34 +88,21 @@ struct LowConfidenceBanner: View {
 
 
 // ============================================================
-// Shared Vitamins & Minerals entry form. The ~22-row NameValue
-// list was duplicated in IngredientAdd (binding to @State vars)
-// and IngredientEdit (binding to `$ingredient.X`). Both now pass
-// an ordered list of (label, Binding<Double>) rows so the row
-// set, order, and grouping live in one place. The 3-group layout
-// (10 / 10 / 2) is preserved exactly.
+// Shared Vitamins & Minerals entry form. Both screens build the
+// row list from NutrientCatalog.vmFormRows, so the row set and
+// order live in the catalog. A single dynamic ForEach lays out
+// however many rows the catalog defines (the old hard-coded
+// 0..<10/10..<20/20..<22 groups crashed if the count changed).
 // ============================================================
 struct VitaminMineralForm: View {
-    // 22 rows in display order. Built by each screen from its own
+    // Rows in display order. Built by each screen from its own
     // bindings; this view only lays them out.
     let rows: [(String, Binding<Double>)]
 
     var body: some View {
         Section(header: Text("Vitamins and Minerals")) {
-            Group {
-                ForEach(0..<10, id: \.self) { i in
-                    NameValue(rows[i].0, rows[i].1, edit: true)
-                }
-            }
-            Group {
-                ForEach(10..<20, id: \.self) { i in
-                    NameValue(rows[i].0, rows[i].1, edit: true)
-                }
-            }
-            Group {
-                ForEach(20..<22, id: \.self) { i in
-                    NameValue(rows[i].0, rows[i].1, edit: true)
-                }
+            ForEach(rows.indices, id: \.self) { i in
+                NameValue(rows[i].0, rows[i].1, edit: true)
             }
         }
     }
@@ -250,44 +237,16 @@ extension IngredientEdit {
         if let v = p.allergens       { ingredient.allergens = v }
 
         if let v = p.servingSize      { ingredient.servingSize = v }
-        if let v = p.calories         { ingredient.calories = v }
-        if let v = p.fat              { ingredient.fat = v }
-        if let v = p.saturatedFat     { ingredient.saturatedFat = v }
-        if let v = p.transFat         { ingredient.transFat = v }
-        if let v = p.cholesterol      { ingredient.cholesterol = v }
-        if let v = p.sodium           { ingredient.sodium = v }
-        if let v = p.carbohydrates    { ingredient.carbohydrates = v }
-        if let v = p.fiber            { ingredient.fiber = v }
-        if let v = p.sugar            { ingredient.sugar = v }
-        if let v = p.addedSugar       { ingredient.addedSugar = v }
-        if let v = p.netCarbs         { ingredient.netCarbs = v }
-        if let v = p.protein          { ingredient.protein = v }
 
         if p.consumptionUnit != nil { ingredient.consumptionUnit = p.consumptionUnitEnum }
         if let v = p.consumptionGrams { ingredient.consumptionGrams = v }
 
-        if let v = p.omega3          { ingredient.omega3 = v }
-        if let v = p.vitaminD        { ingredient.vitaminD = v }
-        if let v = p.calcium         { ingredient.calcium = v }
-        if let v = p.iron            { ingredient.iron = v }
-        if let v = p.potassium       { ingredient.potassium = v }
-        if let v = p.vitaminA        { ingredient.vitaminA = v }
-        if let v = p.vitaminC        { ingredient.vitaminC = v }
-        if let v = p.vitaminE        { ingredient.vitaminE = v }
-        if let v = p.vitaminK        { ingredient.vitaminK = v }
-        if let v = p.thiamin         { ingredient.thiamin = v }
-        if let v = p.riboflavin      { ingredient.riboflavin = v }
-        if let v = p.niacin          { ingredient.niacin = v }
-        if let v = p.vitaminB6       { ingredient.vitaminB6 = v }
-        if let v = p.folate          { ingredient.folate = v }
-        if let v = p.vitaminB12      { ingredient.vitaminB12 = v }
-        if let v = p.pantothenicAcid { ingredient.pantothenicAcid = v }
-        if let v = p.phosphorus      { ingredient.phosphorus = v }
-        if let v = p.magnesium       { ingredient.magnesium = v }
-        if let v = p.zinc            { ingredient.zinc = v }
-        if let v = p.selenium        { ingredient.selenium = v }
-        if let v = p.copper          { ingredient.copper = v }
-        if let v = p.manganese       { ingredient.manganese = v }
+        // Macros + V&M — every scannable nutrient in the catalog.
+        for d in NutrientCatalog.scannable {
+            if let v = p[keyPath: d.parsed!] {
+                ingredient[keyPath: d.ingredient] = v
+            }
+        }
     }
 
 
@@ -546,32 +505,14 @@ extension IngredientEdit {
     // and minerals" toggle hid them by default, which made it
     // hard to discover that V&M data could be entered at all.
     // Now they show inline; leave a field blank to record nothing.
-    // Row layout/order lives in the shared VitaminMineralForm.
+    // Row set and order live in NutrientCatalog.vmFormRows.
     private var vitaminAndMineralsSection: some View {
-        VitaminMineralForm(rows: [
-            ("Omega-3", $ingredient.omega3),
-            ("Vitamin D", $ingredient.vitaminD),
-            ("Calcium", $ingredient.calcium),
-            ("Iron", $ingredient.iron),
-            ("Potassium", $ingredient.potassium),
-            ("Vitamin A", $ingredient.vitaminA),
-            ("Vitamin C", $ingredient.vitaminC),
-            ("Vitamin E", $ingredient.vitaminE),
-            ("Vitamin K", $ingredient.vitaminK),
-            ("Thiamin", $ingredient.thiamin),
-            ("Vitamin B6", $ingredient.vitaminB6),
-            ("Folate", $ingredient.folate),
-            ("Vitamin B12", $ingredient.vitaminB12),
-            ("Pantothenic Acid", $ingredient.pantothenicAcid),
-            ("Phosphorus", $ingredient.phosphorus),
-            ("Magnesium", $ingredient.magnesium),
-            ("Zinc", $ingredient.zinc),
-            ("Selenium", $ingredient.selenium),
-            ("Copper", $ingredient.copper),
-            ("Manganese", $ingredient.manganese),
-            ("Niacin", $ingredient.niacin),
-            ("Riboflavin", $ingredient.riboflavin),
-        ])
+        VitaminMineralForm(rows: NutrientCatalog.vmFormRows.map { d in
+            (d.label, Binding(
+                get: { ingredient[keyPath: d.ingredient] },
+                set: { ingredient[keyPath: d.ingredient] = $0 }
+            ))
+        })
     }
 }
 

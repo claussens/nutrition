@@ -203,19 +203,10 @@ struct MealIngredientDetail: View {
     }
 
 
-    // Display unit for each nutrient (matches the NIH factsheet units
-    // also documented inline in VitaminMineral.swift).
+    // Display unit for each nutrient — the descriptor's RDA unit
+    // ("mg" / "mcg" / "IU"), matching what nutrientValue() converts
+    // into.
     private func unitLabel(for type: VitaminMineralType) -> String {
-        switch type {
-        case .calcium, .iron, .magnesium, .manganese, .niacin,
-             .pantothenicAcid, .phosphorus, .potassium, .riboflavin,
-             .thiamin, .vitaminB6, .vitaminC, .vitaminE, .zinc:
-            return "mg"
-        case .copper, .folate, .folicAcid, .selenium, .vitaminA,
-             .vitaminB12, .vitaminK:
-            return "mcg"
-        case .vitaminD:
-            return "IU"
-        }
+        (NutrientCatalog.byVMType[type]?.rdaUnit ?? .milligram).singularForm
     }
 }

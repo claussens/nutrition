@@ -2,13 +2,10 @@ import Foundation
 
 
 // All vitamin/mineral types in a fixed display order.  Mirrors the
-// order used by VitaminMineralMgr.getAll().
-let vitaminMineralOrder: [VitaminMineralType] = [
-    .calcium, .copper, .folate, .folicAcid, .iron, .magnesium,
-    .manganese, .niacin, .pantothenicAcid, .phosphorus, .potassium,
-    .riboflavin, .selenium, .thiamin, .vitaminA, .vitaminB12,
-    .vitaminB6, .vitaminC, .vitaminD, .vitaminE, .vitaminK, .zinc
-]
+// order used by VitaminMineralMgr.getAll().  Derived from the
+// nutrient catalog (alphabetical by field id — identical to the
+// historical hand-maintained order).
+let vitaminMineralOrder: [VitaminMineralType] = NutrientCatalog.dashboardOrder
 
 
 // Total each vitamin/mineral across all meal ingredients (a meal is
@@ -167,39 +164,14 @@ func allContributorsFor(
 // return it in the unit reported by VitaminMineral.unit() — the same
 // unit min()/max() use, so callers can compare freely.
 //
-// Two ingredient fields are stored in a different unit than what NIH
-// reports the RDA/UL in, and both need converting here so the row's
-// min ≤ actual ≤ max comparison is unit-consistent:
-//   - copper:    Ingredient stores mg, NIH reports mcg → ×1000
-//   - vitaminD:  Ingredient stores mcg, NIH reports IU → ×40
-//                (1 mcg vitamin D = 40 IU)
+// The keypath and the stored-unit → RDA-unit conversion factor both
+// come from the descriptor (copper mg→mcg ×1000, vitamin D mcg→IU
+// ×40 — 1 mcg vitamin D = 40 IU — live in NutrientCatalog only).
 // Internal (not file-private) so MealIngredientDetail can reuse the
 // same mapping + unit conversions when showing per-ingredient
 // contributions; otherwise the detail page double-shows raw mg/mcg
 // for copper and raw mcg for vitamin D, breaking unit consistency.
 func nutrientValue(of ingredient: Ingredient, for type: VitaminMineralType) -> Double {
-    switch type {
-    case .calcium:         return ingredient.calcium
-    case .copper:          return ingredient.copper * 1000     // mg → mcg
-    case .folate:          return ingredient.folate
-    case .folicAcid:       return ingredient.folicAcid
-    case .iron:            return ingredient.iron
-    case .magnesium:       return ingredient.magnesium
-    case .manganese:       return ingredient.manganese
-    case .niacin:          return ingredient.niacin
-    case .pantothenicAcid: return ingredient.pantothenicAcid
-    case .phosphorus:      return ingredient.phosphorus
-    case .potassium:       return ingredient.potassium
-    case .riboflavin:      return ingredient.riboflavin
-    case .selenium:        return ingredient.selenium
-    case .thiamin:         return ingredient.thiamin
-    case .vitaminA:        return ingredient.vitaminA
-    case .vitaminB12:      return ingredient.vitaminB12
-    case .vitaminB6:       return ingredient.vitaminB6
-    case .vitaminC:        return ingredient.vitaminC
-    case .vitaminD:        return ingredient.vitaminD * 40     // mcg → IU
-    case .vitaminE:        return ingredient.vitaminE
-    case .vitaminK:        return ingredient.vitaminK
-    case .zinc:            return ingredient.zinc
-    }
+    guard let d = NutrientCatalog.byVMType[type] else { return 0 }
+    return ingredient[keyPath: d.ingredient] * d.rdaFactor
 }

@@ -153,6 +153,17 @@ struct NutritionScannerService {
         func n(_ v: Double) -> String {
             v == v.rounded() ? String(Int(v)) : String(format: "%.2f", v)
         }
+        // One "id: value" pair per scannable nutrient, 5 per line —
+        // driven by the catalog so verify re-checks every nutrient the
+        // scanner can return (previously the extended macros were
+        // omitted from the snapshot).
+        let scannable = NutrientCatalog.scannable
+        let nutrientLines = stride(from: 0, to: scannable.count, by: 5).map { start in
+            scannable[start..<Swift.min(start + 5, scannable.count)]
+                .map { "\($0.id): \(n(i[keyPath: $0.ingredient]))" }
+                .joined(separator: "  ")
+        }.joined(separator: "\n")
+
         let stored = """
         name: \(i.name)
         brand: \(i.brand.isEmpty ? "(none)" : i.brand)
@@ -161,11 +172,7 @@ struct NutritionScannerService {
         servingSize(g): \(n(i.servingSize))
         consumptionUnit: \(i.consumptionUnit.singularForm)
         consumptionGrams: \(n(i.consumptionGrams))
-        calories: \(n(i.calories))  fat: \(n(i.fat))  fiber: \(n(i.fiber))  netCarbs: \(n(i.netCarbs))  protein: \(n(i.protein))
-        omega3: \(n(i.omega3))  vitaminD: \(n(i.vitaminD))  calcium: \(n(i.calcium))  iron: \(n(i.iron))  potassium: \(n(i.potassium))
-        vitaminA: \(n(i.vitaminA))  vitaminC: \(n(i.vitaminC))  vitaminE: \(n(i.vitaminE))  vitaminK: \(n(i.vitaminK))  thiamin: \(n(i.thiamin))
-        riboflavin: \(n(i.riboflavin))  niacin: \(n(i.niacin))  vitaminB6: \(n(i.vitaminB6))  folate: \(n(i.folate))  vitaminB12: \(n(i.vitaminB12))
-        pantothenicAcid: \(n(i.pantothenicAcid))  phosphorus: \(n(i.phosphorus))  magnesium: \(n(i.magnesium))  zinc: \(n(i.zinc))  selenium: \(n(i.selenium))  copper: \(n(i.copper))  manganese: \(n(i.manganese))
+        \(nutrientLines)
         """
 
         // When the user has already agreed on a brand, that brand is
@@ -483,20 +490,10 @@ struct NutritionScannerService {
             ]
         ]
 
-        // Macros + V&M — long but mechanical.
-        let nutrientFields = [
-            "calories", "fat", "saturatedFat", "transFat", "cholesterol",
-            "sodium", "carbohydrates", "fiber", "sugar", "addedSugar",
-            "netCarbs", "protein",
-            "omega3", "vitaminD", "calcium", "iron", "potassium",
-            "vitaminA", "vitaminC", "vitaminE", "vitaminK",
-            "thiamin", "riboflavin", "niacin",
-            "vitaminB6", "folate", "vitaminB12", "pantothenicAcid",
-            "phosphorus", "magnesium", "zinc", "selenium",
-            "copper", "manganese"
-        ]
-        for field in nutrientFields {
-            props[field] = nullableNumber
+        // Macros + V&M — every scannable nutrient in the catalog, so
+        // the schema and ParsedIngredient can't drift.
+        for d in NutrientCatalog.scannable {
+            props[d.id] = nullableNumber
         }
 
         return [

@@ -44,122 +44,7 @@ class IngredientMgr: ObservableObject {
     }
 
 
-    func create(name: String,
-                brand: String = "",
-                fullName: String = "",
-                category: String = "",
-                url: String = "",
-                totalCost: Double = 0,
-                totalGrams:Double = 0,
-                ingredients: [String] = [],
-                allergens: [String] = [],
-                servingSize: Double,
-                calories: Double,
-                fat: Double,
-                saturatedFat: Double = 0,
-                transFat: Double = 0,
-                polyunsaturatedFat: Double = 0,
-                monounsaturatedFat: Double = 0,
-                cholesterol: Double = 0,
-                sodium: Double = 0,
-                carbohydrates: Double = 0,
-                fiber: Double,
-                sugar: Double = 0,
-                addedSugar: Double = 0,
-                sugarAlcohool: Double = 0,
-                netCarbs: Double,
-                protein: Double,
-                omega3: Double = 0,
-                zinc: Double = 0,
-                vitaminK: Double = 0,
-                vitaminE: Double = 0,
-                vitaminD: Double = 0,
-                vitaminC: Double = 0,
-                vitaminB6: Double = 0,
-                vitaminB12: Double = 0,
-                vitaminA: Double = 0,
-                thiamin: Double = 0,
-                selenium: Double = 0,
-                riboflavin: Double = 0,
-                potassium: Double = 0,
-                phosphorus: Double = 0,
-                pantothenicAcid: Double = 0,
-                niacin: Double = 0,
-                manganese: Double = 0,
-                magnesium: Double = 0,
-                iron: Double = 0,
-                folicAcid: Double = 0,
-                folate: Double = 0,
-                copper: Double = 0,
-                calcium: Double = 0,
-                consumptionUnit: Unit,
-                consumptionGrams: Double,
-                meatAmount: Double = 0,
-                mealAdjustments: [MealAdjustment] = [],
-                microNutrients: Bool = false,
-                verified: String = "",
-                stepAmount: Double = 0,
-                defaultAmount: Double = 0,
-                foodActive: Bool = true,
-                foodName: String = "") {
-        let ingredient = Ingredient(name: name,
-                                    brand: brand,
-                                    fullName: fullName,
-                                    category: category,
-                                    foodName: foodName,
-                                    url: url,
-                                    totalCost: totalCost,
-                                    totalGrams: totalGrams,
-                                    ingredients: ingredients,
-                                    allergens: allergens,
-                                    servingSize: servingSize,
-                                    calories: calories,
-                                    fat: fat,
-                                    saturatedFat: saturatedFat,
-                                    transFat: transFat,
-                                    polyunsaturatedFat: polyunsaturatedFat,
-                                    monounsaturatedFat: monounsaturatedFat,
-                                    cholesterol: cholesterol,
-                                    sodium: sodium,
-                                    carbohydrates: carbohydrates,
-                                    fiber: fiber,
-                                    sugar: sugar,
-                                    addedSugar: addedSugar,
-                                    sugarAlcohool: sugarAlcohool,
-                                    netCarbs: netCarbs,
-                                    protein: protein,
-                                    omega3: omega3,
-                                    zinc: zinc,
-                                    vitaminK: vitaminK,
-                                    vitaminE: vitaminE,
-                                    vitaminD: vitaminD,
-                                    vitaminC: vitaminC,
-                                    vitaminB6: vitaminB6,
-                                    vitaminB12: vitaminB12,
-                                    vitaminA: vitaminA,
-                                    thiamin: thiamin,
-                                    selenium: selenium,
-                                    riboflavin: riboflavin,
-                                    potassium: potassium,
-                                    phosphorus: phosphorus,
-                                    pantothenicAcid: pantothenicAcid,
-                                    niacin: niacin,
-                                    manganese: manganese,
-                                    magnesium: magnesium,
-                                    iron: iron,
-                                    folicAcid: folicAcid,
-                                    folate: folate,
-                                    copper: copper,
-                                    calcium: calcium,
-                                    consumptionUnit: consumptionUnit,
-                                    consumptionGrams: consumptionGrams,
-                                    meatAmount: meatAmount,
-                                    mealAdjustments: mealAdjustments,
-                                    microNutrients: microNutrients,
-                                    verified: verified,
-                                    stepAmount: stepAmount,
-                                    defaultAmount: defaultAmount,
-                                    foodActive: foodActive)
+    func add(_ ingredient: Ingredient) {
         self.ingredients.append(ingredient)
     }
 
@@ -235,7 +120,7 @@ class IngredientMgr: ObservableObject {
 
     func update(_ ingredient: Ingredient) {
         if let index = ingredients.firstIndex(where: { $0.id == ingredient.id }) {
-            ingredients[index] = ingredient.update(ingredient: ingredient)
+            ingredients[index] = ingredient
         }
     }
 
@@ -293,49 +178,54 @@ struct Ingredient: Codable, Identifiable {
     var allergens: [String]
 
     var servingSize: Double
-    var calories: Double
 
-    var fat: Double
-    var saturatedFat: Double
-    var transFat: Double
-    var polyunsaturatedFat: Double
-    var monounsaturatedFat: Double
+    // Nutrient fields all default to 0 so that adding a new one is a
+    // single line here plus a NutrientCatalog row — init(from:) fills
+    // them by looping the catalog, and inits that don't mention a
+    // nutrient leave it 0.
+    var calories: Double = 0
 
-    var cholesterol: Double
-    var sodium: Double
+    var fat: Double = 0
+    var saturatedFat: Double = 0
+    var transFat: Double = 0
+    var polyunsaturatedFat: Double = 0
+    var monounsaturatedFat: Double = 0
 
-    var carbohydrates: Double
-    var fiber: Double
-    var sugar: Double
-    var addedSugar: Double
-    var sugarAlcohool: Double
-    var netCarbs: Double
+    var cholesterol: Double = 0
+    var sodium: Double = 0
 
-    var protein: Double
+    var carbohydrates: Double = 0
+    var fiber: Double = 0
+    var sugar: Double = 0
+    var addedSugar: Double = 0
+    var sugarAlcohool: Double = 0
+    var netCarbs: Double = 0
 
-    var omega3: Double
-    var zinc: Double
-    var vitaminK: Double
-    var vitaminE: Double
-    var vitaminD: Double
-    var vitaminC: Double
-    var vitaminB6: Double
-    var vitaminB12: Double
-    var vitaminA: Double
-    var thiamin: Double
-    var selenium: Double
-    var riboflavin: Double
-    var potassium: Double
-    var phosphorus: Double
-    var pantothenicAcid: Double
-    var niacin: Double
-    var manganese: Double
-    var magnesium: Double
-    var iron: Double
-    var folicAcid: Double
-    var folate: Double
-    var copper: Double
-    var calcium: Double
+    var protein: Double = 0
+
+    var omega3: Double = 0
+    var zinc: Double = 0
+    var vitaminK: Double = 0
+    var vitaminE: Double = 0
+    var vitaminD: Double = 0
+    var vitaminC: Double = 0
+    var vitaminB6: Double = 0
+    var vitaminB12: Double = 0
+    var vitaminA: Double = 0
+    var thiamin: Double = 0
+    var selenium: Double = 0
+    var riboflavin: Double = 0
+    var potassium: Double = 0
+    var phosphorus: Double = 0
+    var pantothenicAcid: Double = 0
+    var niacin: Double = 0
+    var manganese: Double = 0
+    var magnesium: Double = 0
+    var iron: Double = 0
+    var folicAcid: Double = 0
+    var folate: Double = 0
+    var copper: Double = 0
+    var calcium: Double = 0
 
     var consumptionUnit: Unit
     var consumptionGrams: Double
@@ -510,44 +400,6 @@ struct Ingredient: Codable, Identifiable {
         self.ingredients = try c.decode([String].self, forKey: .ingredients)
         self.allergens = try c.decode([String].self, forKey: .allergens)
         self.servingSize = try c.decode(Double.self, forKey: .servingSize)
-        self.calories = try c.decode(Double.self, forKey: .calories)
-        self.fat = try c.decode(Double.self, forKey: .fat)
-        self.saturatedFat = try c.decode(Double.self, forKey: .saturatedFat)
-        self.transFat = try c.decode(Double.self, forKey: .transFat)
-        self.polyunsaturatedFat = try c.decode(Double.self, forKey: .polyunsaturatedFat)
-        self.monounsaturatedFat = try c.decode(Double.self, forKey: .monounsaturatedFat)
-        self.cholesterol = try c.decode(Double.self, forKey: .cholesterol)
-        self.sodium = try c.decode(Double.self, forKey: .sodium)
-        self.carbohydrates = try c.decode(Double.self, forKey: .carbohydrates)
-        self.fiber = try c.decode(Double.self, forKey: .fiber)
-        self.sugar = try c.decode(Double.self, forKey: .sugar)
-        self.addedSugar = try c.decode(Double.self, forKey: .addedSugar)
-        self.sugarAlcohool = try c.decode(Double.self, forKey: .sugarAlcohool)
-        self.netCarbs = try c.decode(Double.self, forKey: .netCarbs)
-        self.protein = try c.decode(Double.self, forKey: .protein)
-        self.omega3 = try c.decode(Double.self, forKey: .omega3)
-        self.zinc = try c.decode(Double.self, forKey: .zinc)
-        self.vitaminK = try c.decode(Double.self, forKey: .vitaminK)
-        self.vitaminE = try c.decode(Double.self, forKey: .vitaminE)
-        self.vitaminD = try c.decode(Double.self, forKey: .vitaminD)
-        self.vitaminC = try c.decode(Double.self, forKey: .vitaminC)
-        self.vitaminB6 = try c.decode(Double.self, forKey: .vitaminB6)
-        self.vitaminB12 = try c.decode(Double.self, forKey: .vitaminB12)
-        self.vitaminA = try c.decode(Double.self, forKey: .vitaminA)
-        self.thiamin = try c.decode(Double.self, forKey: .thiamin)
-        self.selenium = try c.decode(Double.self, forKey: .selenium)
-        self.riboflavin = try c.decode(Double.self, forKey: .riboflavin)
-        self.potassium = try c.decode(Double.self, forKey: .potassium)
-        self.phosphorus = try c.decode(Double.self, forKey: .phosphorus)
-        self.pantothenicAcid = try c.decode(Double.self, forKey: .pantothenicAcid)
-        self.niacin = try c.decode(Double.self, forKey: .niacin)
-        self.manganese = try c.decode(Double.self, forKey: .manganese)
-        self.magnesium = try c.decode(Double.self, forKey: .magnesium)
-        self.iron = try c.decode(Double.self, forKey: .iron)
-        self.folicAcid = try c.decode(Double.self, forKey: .folicAcid)
-        self.folate = try c.decode(Double.self, forKey: .folate)
-        self.copper = try c.decode(Double.self, forKey: .copper)
-        self.calcium = try c.decode(Double.self, forKey: .calcium)
         self.consumptionUnit = try c.decode(Unit.self, forKey: .consumptionUnit)
         self.consumptionGrams = try c.decode(Double.self, forKey: .consumptionGrams)
         self.meatAmount = try c.decode(Double.self, forKey: .meatAmount)
@@ -557,6 +409,16 @@ struct Ingredient: Codable, Identifiable {
         self.stepAmount = try c.decodeIfPresent(Double.self, forKey: .stepAmount) ?? 0
         self.defaultAmount = try c.decodeIfPresent(Double.self, forKey: .defaultAmount) ?? 0
         self.foodActive = try c.decodeIfPresent(Bool.self, forKey: .foodActive) ?? true
+
+        // Nutrient fields: driven by the catalog so the JSON keys and
+        // the stored properties can't drift. decodeIfPresent (falling
+        // back to the property's 0 default) makes a newly added
+        // nutrient non-breaking for older payloads.
+        let dyn = try decoder.container(keyedBy: NutrientCodingKey.self)
+        for d in NutrientCatalog.all {
+            self[keyPath: d.ingredient] =
+                try dyn.decodeIfPresent(Double.self, forKey: NutrientCodingKey(d.id)) ?? 0
+        }
     }
 
     var effectiveTotalGrams: Double {
@@ -621,67 +483,18 @@ struct Ingredient: Codable, Identifiable {
     }
 
 
-    func update(ingredient: Ingredient) -> Ingredient {
-        return Ingredient(id: ingredient.id,
-                          name: ingredient.name,
-                          brand: ingredient.brand,
-                          fullName: ingredient.fullName,
-                          category: ingredient.category,
-                          foodName: ingredient.foodName,
-                          url: ingredient.url,
-                          totalCost: ingredient.totalCost,
-                          totalGrams: ingredient.totalGrams,
-                          ingredients: ingredient.ingredients,
-                          allergens: ingredient.allergens,
-                          servingSize: ingredient.servingSize,
-                          calories: ingredient.calories,
-                          fat: ingredient.fat,
-                          saturatedFat: ingredient.saturatedFat,
-                          transFat: ingredient.transFat,
-                          polyunsaturatedFat: ingredient.polyunsaturatedFat,
-                          monounsaturatedFat: ingredient.monounsaturatedFat,
-                          cholesterol: ingredient.cholesterol,
-                          sodium: ingredient.sodium,
-                          carbohydrates: ingredient.carbohydrates,
-                          fiber: ingredient.fiber,
-                          sugar: ingredient.sugar,
-                          addedSugar: ingredient.addedSugar,
-                          sugarAlcohool: ingredient.sugarAlcohool,
-                          netCarbs: ingredient.netCarbs,
-                          protein: ingredient.protein,
-                          omega3: ingredient.omega3,
-                          zinc: ingredient.zinc,
-                          vitaminK: ingredient.vitaminK,
-                          vitaminE: ingredient.vitaminE,
-                          vitaminD: ingredient.vitaminD,
-                          vitaminC: ingredient.vitaminC,
-                          vitaminB6: ingredient.vitaminB6,
-                          vitaminB12: ingredient.vitaminB12,
-                          vitaminA: ingredient.vitaminA,
-                          thiamin: ingredient.thiamin,
-                          selenium: ingredient.selenium,
-                          riboflavin: ingredient.riboflavin,
-                          potassium: ingredient.potassium,
-                          phosphorus: ingredient.phosphorus,
-                          pantothenicAcid: ingredient.pantothenicAcid,
-                          niacin: ingredient.niacin,
-                          manganese: ingredient.manganese,
-                          magnesium: ingredient.magnesium,
-                          iron: ingredient.iron,
-                          folicAcid: ingredient.folicAcid,
-                          folate: ingredient.folate,
-                          copper: ingredient.copper,
-                          calcium: ingredient.calcium,
-                          consumptionUnit: ingredient.consumptionUnit,
-                          consumptionGrams: ingredient.consumptionGrams,
-                          meatAmount: ingredient.meatAmount,
-                          mealAdjustments: ingredient.mealAdjustments,
-                          microNutrients: ingredient.microNutrients,
-                          verified: ingredient.verified,
-                          stepAmount: ingredient.stepAmount,
-                          defaultAmount: ingredient.defaultAmount,
-                          foodActive: ingredient.foodActive)
-    }
+}
+
+
+// String-keyed CodingKey used by Ingredient.init(from:) to decode
+// nutrient fields by their NutrientCatalog id (the synthesized
+// CodingKeys enum can't be built from a runtime string).
+struct NutrientCodingKey: CodingKey {
+    let stringValue: String
+    var intValue: Int? { nil }
+    init(_ id: String) { self.stringValue = id }
+    init?(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue: Int) { nil }
 }
 
 

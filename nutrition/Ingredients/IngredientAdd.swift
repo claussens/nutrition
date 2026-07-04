@@ -49,28 +49,13 @@ struct IngredientAdd: View {
     @State var adjustmentAmount: Double = 0
 
     @State var vitaminsAndMinerals: Bool = false
-    @State var omega3: Double = 0
-    @State var vitaminD: Double = 0
-    @State var calcium: Double = 0
-    @State var iron: Double = 0
-    @State var potassium: Double = 0
-    @State var vitaminA: Double = 0
-    @State var vitaminC: Double = 0
-    @State var vitaminE: Double = 0
-    @State var vitaminK: Double = 0
-    @State var thiamin: Double = 0
-    @State var riboflavin: Double = 0
-    @State var niacin: Double = 0
-    @State var vitaminB6: Double = 0
-    @State var folate: Double = 0
-    @State var vitaminB12: Double = 0
-    @State var pantothenicAcid: Double = 0
-    @State var phosphorus: Double = 0
-    @State var magnesium: Double = 0
-    @State var zinc: Double = 0
-    @State var selenium: Double = 0
-    @State var copper: Double = 0
-    @State var manganese: Double = 0
+
+    // Non-core nutrient values keyed by NutrientCatalog id — the V&M
+    // form rows bind into this, and a scan prefill drops every
+    // non-core nutrient it parsed here (including extended macros
+    // like saturatedFat that have no form row, which used to be
+    // silently discarded on Add). Absent key = nothing recorded (0).
+    @State private var nutrientValues: [String: Double] = [:]
 
     var body: some View {
         Form {
@@ -95,50 +80,33 @@ struct IngredientAdd: View {
 
     func save() {
         withAnimation {
-            // Previously the V&M state vars on this view were collected
-            // by the form but discarded at save — `create()` was being
-            // called with only macro fields.  Pass them through so the
-            // values entered actually persist on the new ingredient.
-            ingredientMgr.create(name: name,
-                                 brand: company,
-                                 fullName: product,
-                                 url: url,
-                                 totalCost: cost,
-                                 totalGrams: grams,
-                                 servingSize: servingSize,
-                                 calories: calories,
-                                 fat: fat,
-                                 fiber: fiber,
-                                 netCarbs: netCarbs,
-                                 protein: protein,
-                                 omega3: omega3,
-                                 zinc: zinc,
-                                 vitaminK: vitaminK,
-                                 vitaminE: vitaminE,
-                                 vitaminD: vitaminD,
-                                 vitaminC: vitaminC,
-                                 vitaminB6: vitaminB6,
-                                 vitaminB12: vitaminB12,
-                                 vitaminA: vitaminA,
-                                 thiamin: thiamin,
-                                 selenium: selenium,
-                                 riboflavin: riboflavin,
-                                 potassium: potassium,
-                                 phosphorus: phosphorus,
-                                 pantothenicAcid: pantothenicAcid,
-                                 niacin: niacin,
-                                 manganese: manganese,
-                                 magnesium: magnesium,
-                                 iron: iron,
-                                 folate: folate,
-                                 copper: copper,
-                                 calcium: calcium,
-                                 consumptionUnit: consumptionUnit,
-                                 consumptionGrams: consumptionGrams,
-                                 meatAmount: 0,
-                                 mealAdjustments: mealAdjustments,
-                                 verified: "",
-                                 foodName: foodName)
+            // Core fields come from their own form bindings; every
+            // other nutrient (V&M rows + scanned extended macros) is
+            // written through its catalog keypath, so a new nutrient
+            // needs no change here.
+            var ingredient = Ingredient(name: name,
+                                        brand: company,
+                                        fullName: product,
+                                        foodName: foodName,
+                                        url: url,
+                                        totalCost: cost,
+                                        totalGrams: grams,
+                                        servingSize: servingSize,
+                                        calories: calories,
+                                        fat: fat,
+                                        fiber: fiber,
+                                        netCarbs: netCarbs,
+                                        protein: protein,
+                                        consumptionUnit: consumptionUnit,
+                                        consumptionGrams: consumptionGrams,
+                                        meatAmount: 0,
+                                        mealAdjustments: mealAdjustments)
+            for d in NutrientCatalog.inNutrientsMap {
+                if let v = nutrientValues[d.id] {
+                    ingredient[keyPath: d.ingredient] = v
+                }
+            }
+            ingredientMgr.add(ingredient)
             if !foodName.isEmpty {
                 foodMgr.ensure(name: foodName,
                                defaultMember: name,
@@ -192,28 +160,14 @@ extension IngredientAdd {
         consumptionUnit = p.consumptionUnitEnum
         if let v = p.consumptionGrams { consumptionGrams = v }
 
-        if let v = p.omega3          { omega3 = v }
-        if let v = p.vitaminD        { vitaminD = v }
-        if let v = p.calcium         { calcium = v }
-        if let v = p.iron            { iron = v }
-        if let v = p.potassium       { potassium = v }
-        if let v = p.vitaminA        { vitaminA = v }
-        if let v = p.vitaminC        { vitaminC = v }
-        if let v = p.vitaminE        { vitaminE = v }
-        if let v = p.vitaminK        { vitaminK = v }
-        if let v = p.thiamin         { thiamin = v }
-        if let v = p.riboflavin      { riboflavin = v }
-        if let v = p.niacin          { niacin = v }
-        if let v = p.vitaminB6       { vitaminB6 = v }
-        if let v = p.folate          { folate = v }
-        if let v = p.vitaminB12      { vitaminB12 = v }
-        if let v = p.pantothenicAcid { pantothenicAcid = v }
-        if let v = p.phosphorus      { phosphorus = v }
-        if let v = p.magnesium       { magnesium = v }
-        if let v = p.zinc            { zinc = v }
-        if let v = p.selenium        { selenium = v }
-        if let v = p.copper          { copper = v }
-        if let v = p.manganese       { manganese = v }
+        // Everything beyond the core macros lands in the nutrient
+        // dict, keyed by catalog id (applied to the new Ingredient
+        // at save).
+        for d in NutrientCatalog.inNutrientsMap {
+            if let pk = d.parsed, let v = p[keyPath: pk] {
+                nutrientValues[d.id] = v
+            }
+        }
     }
 
 
@@ -306,31 +260,13 @@ extension IngredientAdd {
     // V&M fields are always visible (toggle gate removed) — see
     // matching note in IngredientEdit.swift.  New ingredients can
     // record V&M values directly without first enabling a toggle.
-    // Row layout/order lives in the shared VitaminMineralForm.
+    // Row set and order live in NutrientCatalog.vmFormRows.
     private var vitaminAndMineralsSection: some View {
-        VitaminMineralForm(rows: [
-            ("Omega-3", $omega3),
-            ("Vitamin D", $vitaminD),
-            ("Calcium", $calcium),
-            ("Iron", $iron),
-            ("Potassium", $potassium),
-            ("Vitamin A", $vitaminA),
-            ("Vitamin C", $vitaminC),
-            ("Vitamin E", $vitaminE),
-            ("Vitamin K", $vitaminK),
-            ("Thiamin", $thiamin),
-            ("Vitamin B6", $vitaminB6),
-            ("Folate", $folate),
-            ("Vitamin B12", $vitaminB12),
-            ("Pantothenic Acid", $pantothenicAcid),
-            ("Phosphorus", $phosphorus),
-            ("Magnesium", $magnesium),
-            ("Zinc", $zinc),
-            ("Selenium", $selenium),
-            ("Copper", $copper),
-            ("Manganese", $manganese),
-            ("Niacin", $niacin),
-            ("Riboflavin", $riboflavin),
-        ])
+        VitaminMineralForm(rows: NutrientCatalog.vmFormRows.map { d in
+            (d.label, Binding(
+                get: { nutrientValues[d.id] ?? 0 },
+                set: { nutrientValues[d.id] = $0 }
+            ))
+        })
     }
 }

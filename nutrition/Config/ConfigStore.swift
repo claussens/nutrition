@@ -299,14 +299,17 @@ final class ConfigStore: ObservableObject {
     // The runtime `Ingredient` synthesizes its CodingKeys from its stored
     // property names, so the JSON keys are exactly the Swift property names
     // (camelCase) — NOT the kebab-case YAML keys. Its `init(from:)` calls plain
-    // (non-optional) `decode(...)` for almost every key, so the dict must carry
-    // EVERY key with a value of the right JSON type. Anything absent in the
-    // config defaults to 0 / "" / [] / false here.
+    // (non-optional) `decode(...)` for the non-nutrient keys, so the dict must
+    // carry EVERY such key with a value of the right JSON type (nutrient keys
+    // are decodeIfPresent and default to 0). Anything absent in the config
+    // defaults to 0 / "" / [] / false here.
     //
     // `consumptionUnit` is a no-payload enum that Swift encodes as
     // `{"<caseName>": {}}` — we reproduce that exact shape.
 
-    private func flatIngredientDict(from ci: ConfigIngredient) -> [String: Any] {
+    // Internal (not private) so the drift test can round-trip every
+    // NutrientCatalog descriptor through the bridge.
+    func flatIngredientDict(from ci: ConfigIngredient) -> [String: Any] {
         // Per-nutrient lookup against the kebab-keyed `nutrients` map. Returns 0
         // when the nutrient is absent (only non-zero nutrients are listed).
         let nutrients = ci.nutrients ?? [:]
@@ -344,42 +347,10 @@ final class ConfigStore: ObservableObject {
         dict["netCarbs"]    = ci.netCarbs ?? 0
         dict["protein"]     = ci.protein ?? 0
 
-        // --- extended macros (may appear in the nutrients map) ---
-        dict["carbohydrates"]      = n("carbohydrates")
-        dict["sugar"]              = n("sugar")
-        dict["addedSugar"]         = n("added-sugar")
-        dict["sugarAlcohool"]      = n("sugar-alcohol")
-        dict["saturatedFat"]       = n("saturated-fat")
-        dict["transFat"]           = n("trans-fat")
-        dict["monounsaturatedFat"] = n("monounsaturated-fat")
-        dict["polyunsaturatedFat"] = n("polyunsaturated-fat")
-        dict["cholesterol"]        = n("cholesterol")
-        dict["sodium"]             = n("sodium")
-        dict["omega3"]             = n("omega3")
-
-        // --- micronutrients (kebab -> camel where they differ) ---
-        dict["zinc"]            = n("zinc")
-        dict["vitaminK"]        = n("vitamin-k")
-        dict["vitaminE"]        = n("vitamin-e")
-        dict["vitaminD"]        = n("vitamin-d")
-        dict["vitaminC"]        = n("vitamin-c")
-        dict["vitaminB6"]       = n("vitamin-b6")
-        dict["vitaminB12"]      = n("vitamin-b12")
-        dict["vitaminA"]        = n("vitamin-a")
-        dict["thiamin"]         = n("thiamin")
-        dict["selenium"]        = n("selenium")
-        dict["riboflavin"]      = n("riboflavin")
-        dict["potassium"]       = n("potassium")
-        dict["phosphorus"]      = n("phosphorus")
-        dict["pantothenicAcid"] = n("pantothenic-acid")
-        dict["niacin"]          = n("niacin")
-        dict["manganese"]       = n("manganese")
-        dict["magnesium"]       = n("magnesium")
-        dict["iron"]            = n("iron")
-        dict["folicAcid"]       = n("folic-acid")
-        dict["folate"]          = n("folate")
-        dict["copper"]          = n("copper")
-        dict["calcium"]         = n("calcium")
+        // --- everything else (kebab -> camel, driven by the catalog) ---
+        for d in NutrientCatalog.inNutrientsMap {
+            dict[d.id] = n(d.kebabKey)
+        }
 
         // --- consumption / portioning ---
         // Unit's synthesized Codable shape: an empty object under the case name.
