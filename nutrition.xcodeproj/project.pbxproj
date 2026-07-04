@@ -87,6 +87,7 @@
 		AA0200000000000000000005 /* VitaminMineralRDATests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000005 /* VitaminMineralRDATests.swift */; };
 		AB0200000000000000000002 /* NutrientCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0100000000000000000002 /* NutrientCatalogTests.swift */; };
 		AA0200000000000000000006 /* CostMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000006 /* CostMathTests.swift */; };
+		AA0200000000000000000007 /* ConfigSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000007 /* ConfigSmokeTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -181,6 +182,7 @@
 		AA0100000000000000000005 /* VitaminMineralRDATests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitaminMineralRDATests.swift; sourceTree = "<group>"; };
 		AB0100000000000000000002 /* NutrientCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutrientCatalogTests.swift; sourceTree = "<group>"; };
 		AA0100000000000000000006 /* CostMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostMathTests.swift; sourceTree = "<group>"; };
+		AA0100000000000000000007 /* ConfigSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigSmokeTests.swift; sourceTree = "<group>"; };
 		AA0400000000000000000001 /* nutritionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = nutritionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -264,6 +266,7 @@
 				AA0100000000000000000005 /* VitaminMineralRDATests.swift */,
 				AB0100000000000000000002 /* NutrientCatalogTests.swift */,
 				AA0100000000000000000006 /* CostMathTests.swift */,
+				AA0100000000000000000007 /* ConfigSmokeTests.swift */,
 			);
 			path = nutritionTests;
 			sourceTree = "<group>";
@@ -627,6 +630,7 @@
 				AA0200000000000000000005 /* VitaminMineralRDATests.swift in Sources */,
 				AB0200000000000000000002 /* NutrientCatalogTests.swift in Sources */,
 				AA0200000000000000000006 /* CostMathTests.swift in Sources */,
+				AA0200000000000000000007 /* ConfigSmokeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -112,6 +112,14 @@ final class ConfigStore: ObservableObject {
         return texts
     }
 
+    /// Parse the pristine bundled seed (ignoring the Documents cache) without
+    /// publishing it. The config smoke test decodes every row from this — a
+    /// bundled-seed refresh that breaks the bridge fails the test suite instead
+    /// of the launch fallback path.
+    func bundledConfigData() throws -> ConfigData {
+        try parse(bundledSectionTexts())
+    }
+
     /// Read each section's YAML text from the app bundle only (the pristine
     /// seed) — the fallback when the Documents cache fails parse/validation.
     private func bundledSectionTexts() throws -> [String: String] {
@@ -260,6 +268,12 @@ final class ConfigStore: ObservableObject {
     /// throws an error naming the ingredient (rows are never silently skipped).
     func runtimeIngredients() throws -> [Ingredient] {
         guard let data else { return [] }
+        return try runtimeIngredients(from: data)
+    }
+
+    /// The bridge over an explicit `ConfigData` — the config smoke test runs the
+    /// bundled seed through this without publishing to the live store.
+    func runtimeIngredients(from data: ConfigData) throws -> [Ingredient] {
         let decoder = JSONDecoder()
         return try data.ingredients.map { ci in
             let dict = flatIngredientDict(from: ci)
