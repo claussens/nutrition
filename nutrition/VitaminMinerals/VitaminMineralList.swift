@@ -29,8 +29,9 @@ struct VitaminMineralList: View {
     var body: some View {
         let actuals = computeVitaminMineralActuals(
             mealIngredients: mealIngredientMgr.mealIngredients,
-            ingredientMgr: ingredientMgr,
-            foodMgr: foodMgr
+            resolver: MealResolver(ingredientMgr: ingredientMgr,
+                                   foodMgr: foodMgr,
+                                   profile: profileMgr.profile)
         )
 
         return List {

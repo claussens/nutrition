@@ -13,33 +13,57 @@ let vitaminMineralOrder: [VitaminMineralType] = [
 
 // Total each vitamin/mineral across all meal ingredients (a meal is
 // exactly the rows present). Returns a dictionary keyed by
-// VitaminMineralType.  Ingredients referenced by name but not found
-// in the database are skipped (no crash).  Values are in the same
-// units as the corresponding fields on Ingredient.
+// VitaminMineralType.  Rows resolve through MealResolver — the SAME
+// Food→variant resolution the macro engine uses — so a row named
+// "Eggs" contributes its selected variant's nutrients instead of
+// silently contributing nothing. Composite rows contribute the sum
+// of their parts. Unresolvable rows are skipped (no crash). Values
+// are in the same units as the corresponding fields on Ingredient.
 func computeVitaminMineralActuals(
     mealIngredients: [MealIngredient],
-    ingredientMgr: IngredientMgr,
-    foodMgr: FoodMgr
+    resolver: MealResolver
 ) -> [VitaminMineralType: Double] {
 
     var totals: [VitaminMineralType: Double] = [:]
 
     for mealIngredient in mealIngredients {
-        // Category placeholders are not real foods — contribute no
-        // vitamins/minerals.
-        if mealIngredient.isFoodTypeSlot { continue }
-        guard let ingredient = ingredientMgr.getByName(name: mealIngredient.name) else {
-            continue
-        }
-        guard ingredient.servingSize > 0 else { continue }
-        let servings = (mealIngredient.amount * foodMgr.consumptionGrams(for: ingredient)) / ingredient.servingSize
-
-        for type in vitaminMineralOrder {
-            totals[type, default: 0] += nutrientValue(of: ingredient, for: type) * servings
+        for (ingredient, servings) in resolvedPortions(of: mealIngredient, resolver: resolver) {
+            for type in vitaminMineralOrder {
+                totals[type, default: 0] += nutrientValue(of: ingredient, for: type) * servings
+            }
         }
     }
 
     return totals
+}
+
+
+// Resolve a meal row to the (ingredient, servings) portions it
+// contributes: one pair for an ordinary row, one per component for a
+// composite, none for category placeholders / unresolvable rows.
+// Shared by the totals and the per-nutrient drill-down so the two
+// can never disagree.
+func resolvedPortions(
+    of mealIngredient: MealIngredient,
+    resolver: MealResolver
+) -> [(ingredient: Ingredient, servings: Double)] {
+
+    // Category placeholders are not real foods — no contribution.
+    if mealIngredient.isFoodTypeSlot { return [] }
+
+    if mealIngredient.isComposite {
+        return mealIngredient.compositeParts.compactMap { part in
+            guard let ing = resolver.ingredientMgr.getByName(name: part.selectedVariantName),
+                  ing.servingSize > 0 else { return nil }
+            let servings = (part.amount * resolver.foodMgr.consumptionGrams(for: ing)) / ing.servingSize
+            return (ing, servings)
+        }
+    }
+
+    guard let ingredient = resolver.resolvedIngredient(mealIngredient),
+          ingredient.servingSize > 0 else { return [] }
+    let servings = (mealIngredient.amount * resolver.foodMgr.consumptionGrams(for: ingredient)) / ingredient.servingSize
+    return [(ingredient, servings)]
 }
 
 
@@ -60,28 +84,28 @@ struct VitaminMineralContribution: Identifiable {
 func contributorsTo(
     nutrient: VitaminMineralType,
     mealIngredients: [MealIngredient],
-    ingredientMgr: IngredientMgr,
-    foodMgr: FoodMgr
+    resolver: MealResolver
 ) -> [VitaminMineralContribution] {
 
     var contributions: [VitaminMineralContribution] = []
 
     for mealIngredient in mealIngredients {
-        // Category placeholders are not real foods — no contribution.
-        if mealIngredient.isFoodTypeSlot { continue }
-        guard let ingredient = ingredientMgr.getByName(name: mealIngredient.name) else {
-            continue
+        let portions = resolvedPortions(of: mealIngredient, resolver: resolver)
+        let contribution = portions.reduce(0) {
+            $0 + nutrientValue(of: $1.ingredient, for: nutrient) * $1.servings
         }
-        guard ingredient.servingSize > 0 else { continue }
-        let servings = (mealIngredient.amount * foodMgr.consumptionGrams(for: ingredient)) / ingredient.servingSize
-        let contribution = nutrientValue(of: ingredient, for: nutrient) * servings
 
         if contribution > 0 {
+            // Composite rows display as pieces; ordinary rows use the
+            // resolved ingredient's consumption unit.
+            let unit: Unit = mealIngredient.isComposite
+                ? .piece
+                : portions.first.map { resolver.foodMgr.consumptionUnit(for: $0.ingredient) } ?? .gram
             contributions.append(VitaminMineralContribution(
                 id: mealIngredient.id,
                 ingredientName: mealIngredient.name,
                 amount: mealIngredient.amount,
-                consumptionUnit: foodMgr.consumptionUnit(for: ingredient),
+                consumptionUnit: unit,
                 contribution: contribution
             ))
         }

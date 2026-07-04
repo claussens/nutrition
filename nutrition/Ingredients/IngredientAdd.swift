@@ -100,6 +100,11 @@ struct IngredientAdd: View {
             // called with only macro fields.  Pass them through so the
             // values entered actually persist on the new ingredient.
             ingredientMgr.create(name: name,
+                                 brand: company,
+                                 fullName: product,
+                                 url: url,
+                                 totalCost: cost,
+                                 totalGrams: grams,
                                  servingSize: servingSize,
                                  calories: calories,
                                  fat: fat,

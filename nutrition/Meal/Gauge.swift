@@ -147,7 +147,9 @@ struct Gauge: View {
               .frame(width: side, height: side)
 
             Circle()
-              .trim(from: 0.0, to: min(actual / goal, 1) * dialPercentageUsed)
+              // goal == 0 would make actual/goal NaN/inf and break the
+              // ring trim — treat progress as 0 instead.
+              .trim(from: 0.0, to: (goal > 0 ? min(actual / goal, 1) : 0) * dialPercentageUsed)
               .stroke(getProgressColor(), style: StrokeStyle(lineWidth: progressLineWidth, lineCap: .round))
               .rotationEffect(Angle(degrees: 135.0))
               .frame(width: side, height: side)
@@ -257,6 +259,11 @@ struct Gauge: View {
         }
 
         if type == .goal {
+            // goal == 0 would divide by zero (NaN) — no meaningful
+            // progress to color, so stay on the normal color.
+            if goal <= 0 {
+                return progressLineNormal
+            }
             let difference = abs(((goal - actual) / goal) * 100)
             if difference > errorThreshold {
                 return progressLineError

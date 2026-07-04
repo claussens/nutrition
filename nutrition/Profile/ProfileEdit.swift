@@ -323,8 +323,8 @@ func profileMetricDoc(_ metric: ProfileMetric, profile: Profile) -> ProfileMetri
           result: cals(profile.caloriesBaseMetabolicRate),
           what: "Calories your body burns at complete rest — what it takes to keep your organs running. Doesn't include any movement, digestion, or exercise.",
           formula: profile.gender == .male
-            ? "Mifflin-St Jeor (male):\n  9.99·weight(kg)\n+ 6.25·height(cm)\n− (4.92·age + 5)"
-            : "Mifflin-St Jeor (female):\n  9.99·weight(kg)\n+ 6.25·height(cm)\n− (4.92·age − 161)",
+            ? "Mifflin-St Jeor (male):\n  9.99·weight(kg)\n+ 6.25·height(cm)\n− 4.92·age\n+ 5"
+            : "Mifflin-St Jeor (female):\n  9.99·weight(kg)\n+ 6.25·height(cm)\n− 4.92·age\n− 161",
           inputs: [
             ("weight",  "\(profile.bodyMassKg.formattedString(1)) kg"),
             ("height",  "\(profile.heightCm.formattedString(1)) cm"),

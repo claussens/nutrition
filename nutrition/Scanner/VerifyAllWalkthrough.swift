@@ -212,7 +212,12 @@ struct VerifyAllWalkthrough: View {
                 await MainActor.run {
                     parsed = p
                     changes = rows
-                    selected = Set(rows.map { $0.id }).subtracting(["price"])
+                    // Leave price and low-confidence fields unchecked so
+                    // they require an explicit opt-in, matching the
+                    // single-ingredient verify flow in IngredientEdit.
+                    selected = Set(rows.map { $0.id })
+                      .subtracting(["price"])
+                      .subtracting(Set(p.lowConfidenceFields))
                     let proposedBrand = (p.brand ?? "").trimmingCharacters(in: .whitespaces)
                     brandText = proposedBrand.isEmpty ? ing.brand : proposedBrand
                     phase = .review

@@ -66,7 +66,7 @@ enum ConfigSyncError: LocalizedError {
 enum ConfigSync {
 
     // --- Repo coordinates (NOTE: adjust here if the repo moves) -------------
-    static let owner = "sclaussen"
+    static let owner = "claussens"
     static let repo  = "nutrition-config"
 
     // The five files that make up a complete config snapshot.
@@ -124,9 +124,13 @@ enum ConfigSync {
 
         // 6. Commit: apply atomically, then persist the new shas so the next
         //    refresh can short-circuit. Order matters — only record shas once
-        //    the data is safely applied.
-        try ConfigStore.shared.apply(data)
-        ConfigStore.shared.saveShas(newShas)
+        //    the data is safely applied. apply() mutates @Published state, so
+        //    it must run on the main actor (refresh() runs on a background
+        //    executor).
+        try await MainActor.run {
+            try ConfigStore.shared.apply(data)
+            ConfigStore.shared.saveShas(newShas)
+        }
 
         return .applied(summary: summary(for: data))
     }

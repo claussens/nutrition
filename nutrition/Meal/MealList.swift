@@ -136,6 +136,7 @@ struct MealList: View {
                     .environmentObject(ingredientMgr)
                     .environmentObject(mealIngredientMgr)
                     .environmentObject(foodMgr)
+                    .environmentObject(profileMgr)
               }
           }
           .sheet(isPresented: $showAddFoodPicker) {
@@ -603,13 +604,10 @@ struct MealList: View {
             setMacroActualsAndUpdateMealMacroActuals(mealIngredient)
         }
 
-        var failedCount = 0
-        while failedCount < 10 {
-            while tryAddingAdjustments() {
-                failedCount = 0
-            }
-            failedCount += 1
-        }
+        // Keep applying adjustment passes until a full pass adds
+        // nothing. Once a pass fails, no state has changed, so
+        // re-running it cannot succeed — no retry loop needed.
+        while tryAddingAdjustments() { }
     }
 
 
@@ -671,13 +669,14 @@ struct MealList: View {
             // to the adjustment order sequentially beginning with the
             // position of the first adjustment in the group, but
             // their order is randomized.
+            // Expand from getAll() (ACTIVE adjustments only) — the
+            // raw `adjustments` array includes deactivated rules,
+            // which must not sneak back in via their group.
             adjustmentGroupSeen.append(adjustment.group)
-            var groupedAdjustments: [Adjustment] = adjustmentMgr.adjustments.filter( { $0.group == adjustment.group })
-            for _ in stride(from: groupedAdjustments.count, through: 1, by: -1) {
-                let groupedAdjustment = groupedAdjustments.randomElement()
-                adjustmentOrder.append(groupedAdjustment!)
-                groupedAdjustments = groupedAdjustments.filter( { $0.name != groupedAdjustment!.name })
-            }
+            adjustmentOrder.append(contentsOf:
+                adjustmentMgr.getAll()
+                  .filter { $0.group == adjustment.group }
+                  .shuffled())
         }
 
         return adjustmentOrder
@@ -952,58 +951,24 @@ struct MealList: View {
     }
 
 
-    // A meal row's `name` is a Food name. Resolve it to the
-    // ingredient this SPECIFIC row should use:
-    //   1. the row's own selectedMemberName (per-row choice) if it
-    //      still names a real ingredient,
-    //   2. else the ACTIVE PROFILE's preferred variant for this Food
-    //      (profile.foodMember[foodName]) if it names a real ingredient,
-    //   3. else the Food's global currentIngredientName default,
-    //   4. else the literal name (plain ungrouped ingredient row).
-    // Fallbacks keep it crash-proof if data is inconsistent.
-    func currentName(_ mi: MealIngredient) -> String {
-        if !mi.selectedMemberName.isEmpty,
-           ingredientMgr.getByName(name: mi.selectedMemberName) != nil {
-            return mi.selectedMemberName
-        }
-        if let preferred = profileMgr.profile.foodMember[mi.name],
-           ingredientMgr.getByName(name: preferred) != nil {
-            return preferred
-        }
-        if let f = foodMgr.getByName(name: mi.name),
-           ingredientMgr.getByName(name: f.currentIngredientName) != nil {
-            return f.currentIngredientName
-        }
-        return mi.name
+    // Meal-row → Ingredient resolution is owned by MealResolver
+    // (MealIngredient.swift) so every consumer — macros here, V&M
+    // totals, cost breakdown, daily summary — uses the SAME lookup.
+    // These thin wrappers keep existing call sites unchanged.
+    var resolver: MealResolver {
+        MealResolver(ingredientMgr: ingredientMgr, foodMgr: foodMgr, profile: profileMgr.profile)
     }
 
+    func currentName(_ mi: MealIngredient) -> String {
+        resolver.currentName(mi)
+    }
 
-    // Name-only resolution (no per-row member). Used by the auto-
-    // adjust engine, which targets Foods by name, not specific rows.
-    // Honors the active profile's preferred variant the same way.
     func currentName(forFoodName foodOrName: String) -> String {
-        if let preferred = profileMgr.profile.foodMember[foodOrName],
-           ingredientMgr.getByName(name: preferred) != nil {
-            return preferred
-        }
-        if let f = foodMgr.getByName(name: foodOrName),
-           ingredientMgr.getByName(name: f.currentIngredientName) != nil {
-            return f.currentIngredientName
-        }
-        return foodOrName
+        resolver.currentName(forFoodName: foodOrName)
     }
 
     func resolvedIngredient(_ mi: MealIngredient) -> Ingredient? {
-        // Category placeholders are not real foods — they must
-        // NEVER resolve to an ingredient (zero macros, no cost, no
-        // consumption unit). Mirrors the composite/supplement
-        // exclusions elsewhere.
-        if mi.isFoodTypeSlot { return nil }
-        if let ing = ingredientMgr.getByName(name: currentName(mi)) {
-            return ing
-        }
-        // Last-ditch: any surviving member of the Food.
-        return ingredientMgr.getAll().first { $0.foodName == mi.name }
+        resolver.resolvedIngredient(mi)
     }
 
 

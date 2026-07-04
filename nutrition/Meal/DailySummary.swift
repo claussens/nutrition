@@ -24,10 +24,19 @@ struct DailySummary: View {
     }
 
 
+    // Same Food→variant resolution the macro engine and the cost
+    // breakdown use — keeps this summary consistent with both.
+    private var resolver: MealResolver {
+        MealResolver(ingredientMgr: ingredientMgr,
+                     foodMgr: foodMgr,
+                     profile: profileMgr.profile)
+    }
+
+
     // Sum of cost contributions across the meal ingredients:
-    //   (ingredient.totalCost / ingredient.totalGrams)
+    //   (ingredient.totalCost / ingredient.effectiveTotalGrams)
     //     × (mealIngredient.amount × ingredient.consumptionGrams)
-    // Unpriced ingredients (totalGrams == 0) contribute 0.
+    // Unpriced ingredients (effectiveTotalGrams == 0) contribute 0.
     private func mealTotalCost() -> Double {
         mealIngredientMgr.mealIngredients
           .reduce(0) { running, mi in running + mealRowCost(mi) }
@@ -45,9 +54,9 @@ struct DailySummary: View {
         if mi.isComposite {
             return compositeCost(mi, ingredientMgr, foodMgr)
         }
-        guard let ing = ingredientMgr.getByName(name: mi.name),
-              ing.totalGrams > 0 else { return 0 }
-        let costPerGram = ing.totalCost / ing.totalGrams
+        guard let ing = resolver.resolvedIngredient(mi),
+              ing.effectiveTotalGrams > 0 else { return 0 }
+        let costPerGram = ing.totalCost / ing.effectiveTotalGrams
         return costPerGram * (mi.amount * foodMgr.consumptionGrams(for: ing))
     }
 
@@ -57,7 +66,7 @@ struct DailySummary: View {
     private func mealRowUnit(_ mi: MealIngredient) -> String {
         if mi.isFoodTypeSlot { return "" }
         if mi.isComposite { return Unit.piece.pluralForm }
-        guard let ing = ingredientMgr.getByName(name: mi.name) else { return "" }
+        guard let ing = resolver.resolvedIngredient(mi) else { return "" }
         let unit = foodMgr.consumptionUnit(for: ing)
         return mi.amount.singular() ? unit.singularForm : unit.pluralForm
     }
@@ -77,8 +86,11 @@ struct DailySummary: View {
         let entries: [DayLogEntry] = mealIngredientMgr.mealIngredients
           .filter { !$0.isFoodTypeSlot }
           .map { mi in
-              let resolved = mi.selectedMemberName.isEmpty
-                ? mi.name : mi.selectedMemberName
+              // Row-aware resolution (selected member → profile pref
+              // → Food default) so the snapshot records the variant
+              // whose macros were actually counted.
+              let resolved = mi.isComposite
+                ? mi.name : resolver.currentName(mi)
               return DayLogEntry(
                   id: mi.id,
                   foodName: mi.name,
@@ -106,8 +118,7 @@ struct DailySummary: View {
         // Identical call to the one vitaminMineralRedRows() makes.
         let actuals = computeVitaminMineralActuals(
             mealIngredients: mealIngredientMgr.mealIngredients,
-            ingredientMgr: ingredientMgr,
-            foodMgr: foodMgr
+            resolver: resolver
         )
         let age = profile.age
         let gender = profile.gender
@@ -334,8 +345,7 @@ struct DailySummary: View {
     private func vitaminMineralRedRows() -> [VMRedRow] {
         let actuals = computeVitaminMineralActuals(
             mealIngredients: mealIngredientMgr.mealIngredients,
-            ingredientMgr: ingredientMgr,
-            foodMgr: foodMgr
+            resolver: resolver
         )
         let age = profileMgr.profile.age
         let gender = profileMgr.profile.gender

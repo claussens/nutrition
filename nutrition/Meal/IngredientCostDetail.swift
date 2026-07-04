@@ -21,6 +21,7 @@ struct IngredientCostDetail: View {
     @EnvironmentObject var ingredientMgr: IngredientMgr
     @EnvironmentObject var mealIngredientMgr: MealIngredientMgr
     @EnvironmentObject var foodMgr: FoodMgr
+    @EnvironmentObject var profileMgr: ProfileMgr
 
 
     var body: some View {
@@ -54,6 +55,12 @@ struct IngredientCostDetail: View {
 
 
     private func sortedRows() -> [(mealIngredient: MealIngredient, cost: Double)] {
+        // Row-aware Food→variant resolution (selected member →
+        // profile pref → Food default) — the SAME lookup the macro
+        // engine uses, so a row priced here is the row counted there.
+        let resolver = MealResolver(ingredientMgr: ingredientMgr,
+                                    foodMgr: foodMgr,
+                                    profile: profileMgr.profile)
         let pairs: [(mealIngredient: MealIngredient, cost: Double)] =
             mealIngredientMgr.mealIngredients
               .filter { $0.amount > 0 }
@@ -63,10 +70,7 @@ struct IngredientCostDetail: View {
                 if mi.isComposite {
                     return (mi, compositeCost(mi, ingredientMgr, foodMgr))
                 }
-                // Meal rows are Food names; resolve to the Food's
-                // current ingredient (where the price lives).
-                let lookup = foodMgr.getByName(name: mi.name)?.currentIngredientName ?? mi.name
-                guard let ing = ingredientMgr.getByName(name: lookup) else { return nil }
+                guard let ing = resolver.resolvedIngredient(mi) else { return nil }
                 return (mi, costContribution(mi, ing))
             }
         return pairs.sorted { $0.cost > $1.cost }

@@ -389,7 +389,7 @@ enum ConfigStoreError: LocalizedError {
 // its case names match the config `consumption-unit` strings.
 fileprivate extension ConfigStore {
     static func unitName(_ s: String?) -> String {
-        let known: Set<String> = ["bar", "can", "cup", "egg", "gram", "piece", "pill", "slice", "tablespoon", "whole"]
+        let known: Set<String> = ["bar", "can", "cup", "egg", "gram", "piece", "pill", "slice", "tablespoon", "teaspoon", "whole"]
         let v = s ?? "gram"
         return known.contains(v) ? v : "gram"
     }
@@ -403,6 +403,7 @@ fileprivate extension ConfigStore {
         case "pill": return .pill
         case "slice": return .slice
         case "tablespoon": return .tablespoon
+        case "teaspoon": return .teaspoon
         case "whole": return .whole
         default: return .gram
         }

@@ -303,7 +303,11 @@ class MealIngredientMgr: ObservableObject {
             return
         }
 
-        create(name: name, amount: amount, adjustment: Constants.Manual, priorState: Constants.Ingredient)
+        // Created by the adjustment engine, so mark it Automatic with a
+        // priorState of Ingredient: undoAutoAdjustments() only visits
+        // Automatic rows and deletes those whose priorState is Ingredient,
+        // which reverses this creation.
+        create(name: name, amount: amount, adjustment: Constants.Automatic, priorState: Constants.Ingredient)
     }
 
 
@@ -662,6 +666,70 @@ struct MealIngredient: Codable, Identifiable {
 
     func update(mealIngredient: MealIngredient) -> MealIngredient {
         return mealIngredient
+    }
+}
+
+
+// MARK: - Meal-row resolution (single source of truth)
+//
+// A meal row's `name` is a Food name. Exactly ONE algorithm decides
+// which Ingredient a row resolves to; it is shared by the macro
+// engine (MealList), the V&M totals, the cost breakdown, the daily
+// summary snapshot, and the per-100g drilldowns. These previously
+// each had their own lookup, and the divergence meant the macro
+// gauges, the V&M page, and the meal cost could disagree about the
+// same row. Resolution order:
+//   1. the row's own selectedMemberName (per-row choice) if it
+//      still names a real ingredient,
+//   2. the ACTIVE PROFILE's preferred variant for this Food
+//      (profile.foodMember[foodName]) if it names a real ingredient,
+//   3. the Food's global currentIngredientName default,
+//   4. the literal name (plain ungrouped ingredient row).
+// Fallbacks keep it crash-proof if data is inconsistent.
+struct MealResolver {
+    let ingredientMgr: IngredientMgr
+    let foodMgr: FoodMgr
+    let foodMember: [String: String]   // active profile's per-Food variant prefs
+
+    init(ingredientMgr: IngredientMgr, foodMgr: FoodMgr, profile: Profile) {
+        self.ingredientMgr = ingredientMgr
+        self.foodMgr = foodMgr
+        self.foodMember = profile.foodMember
+    }
+
+    // Row-aware resolution (honors the row's selected member).
+    func currentName(_ mi: MealIngredient) -> String {
+        if !mi.selectedMemberName.isEmpty,
+           ingredientMgr.getByName(name: mi.selectedMemberName) != nil {
+            return mi.selectedMemberName
+        }
+        return currentName(forFoodName: mi.name)
+    }
+
+    // Name-only resolution (no per-row member). Used by the auto-
+    // adjust engine, which targets Foods by name, not specific rows.
+    func currentName(forFoodName foodOrName: String) -> String {
+        if let preferred = foodMember[foodOrName],
+           ingredientMgr.getByName(name: preferred) != nil {
+            return preferred
+        }
+        if let f = foodMgr.getByName(name: foodOrName),
+           ingredientMgr.getByName(name: f.currentIngredientName) != nil {
+            return f.currentIngredientName
+        }
+        return foodOrName
+    }
+
+    // Category placeholders never resolve (zero macros, no cost, no
+    // unit); composites have no single ingredient — callers sum
+    // their parts instead.
+    func resolvedIngredient(_ mi: MealIngredient) -> Ingredient? {
+        if mi.isFoodTypeSlot { return nil }
+        if let ing = ingredientMgr.getByName(name: currentName(mi)) {
+            return ing
+        }
+        // Last-ditch: any surviving member of the Food.
+        return ingredientMgr.getAll().first { $0.foodName == mi.name }
     }
 }
 

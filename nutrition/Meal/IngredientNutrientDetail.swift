@@ -23,6 +23,8 @@ struct IngredientNutrientDetail: View {
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject var ingredientMgr: IngredientMgr
     @EnvironmentObject var mealIngredientMgr: MealIngredientMgr
+    @EnvironmentObject var foodMgr: FoodMgr
+    @EnvironmentObject var profileMgr: ProfileMgr
 
 
     var body: some View {
@@ -53,13 +55,16 @@ struct IngredientNutrientDetail: View {
 
 
     // Pair each meal ingredient with its underlying Ingredient's
-    // per-100g value, drop rows where the lookup fails (defensive
-    // — shouldn't happen in practice but a missing seed entry
-    // shouldn't crash the page), then sort.
+    // per-100g value using the shared Food→variant resolution
+    // (same lookup the macro engine uses), drop rows that don't
+    // resolve (category placeholders, composites), then sort.
     private func sortedRows() -> [(mealIngredient: MealIngredient, value: Double)] {
+        let resolver = MealResolver(ingredientMgr: ingredientMgr,
+                                    foodMgr: foodMgr,
+                                    profile: profileMgr.profile)
         let pairs: [(mealIngredient: MealIngredient, value: Double)] =
             mealIngredientMgr.mealIngredients.compactMap { mi in
-                guard let ing = ingredientMgr.getByName(name: mi.name) else { return nil }
+                guard let ing = resolver.resolvedIngredient(mi) else { return nil }
                 return (mi, valueFor(ing))
             }
         switch sortOrder {

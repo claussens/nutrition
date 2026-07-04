@@ -351,7 +351,8 @@ struct NutritionScannerService {
                                         body: [String: Any]) throws -> URLRequest {
         var req = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
         req.httpMethod = "POST"
-        req.timeoutInterval = 60
+        // Verify can run up to 5 server-side web searches (non-streaming), so 60s is too short.
+        req.timeoutInterval = 180
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")

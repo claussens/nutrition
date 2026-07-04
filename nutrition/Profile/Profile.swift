@@ -687,8 +687,13 @@ struct ProfileMetrics {
 
     // ---- Energy ----
 
+    // Mifflin-St Jeor: 9.99·kg + 6.25·cm − 4.92·age, then +5 (male)
+    // or −161 (female). The sex constant is ADDED after the age term
+    // is subtracted — a previous version distributed the minus sign
+    // over it, overstating female BMR by 322 kcal.
     var caloriesBaseMetabolicRate: Double {
-        return gender == Gender.male ? (self.bodyMassKg * 9.99) + (self.heightCm * 6.25) - (self.age * 4.92 + 5) : (self.bodyMassKg * 9.99) + (self.heightCm * 6.25) - (self.age * 4.92 - 161)
+        let base = (self.bodyMassKg * 9.99) + (self.heightCm * 6.25) - (self.age * 4.92)
+        return gender == Gender.male ? base + 5 : base - 161
     }
 
     var caloriesResting: Double {
@@ -736,7 +741,10 @@ struct ProfileMetrics {
         }
         let protein = lbmFloor
         let netCarbs = self.netCarbsMaximum
-        let fat = (cals - ((protein + netCarbs) * 4)) / 9
+        // Clamped at 0 like the ratio branch's netCarbs — a small
+        // calorie goal with a high protein floor can otherwise
+        // produce a negative fat target.
+        let fat = max(0, (cals - ((protein + netCarbs) * 4)) / 9)
         return MacroGoals(protein: protein, fat: fat, netCarbs: netCarbs)
     }
 

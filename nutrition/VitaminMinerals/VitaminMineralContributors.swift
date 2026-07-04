@@ -126,8 +126,9 @@ struct VitaminMineralContributors: View {
         let contributions = contributorsTo(
             nutrient: nutrient,
             mealIngredients: mealIngredientMgr.mealIngredients,
-            ingredientMgr: ingredientMgr,
-            foodMgr: foodMgr
+            resolver: MealResolver(ingredientMgr: ingredientMgr,
+                                   foodMgr: foodMgr,
+                                   profile: profileMgr.profile)
         )
         let total = contributions.reduce(0) { $0 + $1.contribution }
         let vm = VitaminMineral(name: nutrient,

@@ -75,7 +75,10 @@ struct VitaminMineral: Codable, Identifiable {
     // semantics to the former hardcoded if-ladders.  Missing
     // nutrient/threshold returns 0.
     private func lookup(_ thresholds: [ConfigRDAThreshold]) -> Double {
-        for row in thresholds where age <= row.maxAge {
+        // NIH bands use whole-year ceilings (e.g. 14–18), so compare
+        // the whole-year age: a continuous 18.5 must still land in the
+        // 14–18 band, not fall through to the next one a year early.
+        for row in thresholds where floor(age) <= row.maxAge {
             return gender == Gender.male ? row.male : row.female
         }
         return 0

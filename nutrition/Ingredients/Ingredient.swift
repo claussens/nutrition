@@ -32,7 +32,14 @@ class IngredientMgr: ObservableObject {
 
 
     init() {
-        self.ingredients = (try? ConfigStore.shared.runtimeIngredients()) ?? []
+        // Surface config load failures in the console instead of silently
+        // emptying the DB; a proper alert / last-good cache is future work.
+        do {
+            self.ingredients = try ConfigStore.shared.runtimeIngredients()
+        } catch {
+            print("IngredientMgr: FAILED to load ingredients from config: \(error)")
+            self.ingredients = []
+        }
     }
 
 

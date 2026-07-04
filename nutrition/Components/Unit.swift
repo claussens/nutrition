@@ -15,6 +15,7 @@ enum Unit: ValueType {
     case pill
     case slice
     case tablespoon
+    case teaspoon
     case whole
 
     case calorie
@@ -45,6 +46,7 @@ enum Unit: ValueType {
         case .pill: return "pill"
         case .slice: return "slice"
         case .tablespoon: return "tbsp"
+        case .teaspoon: return "tsp"
         case .whole: return "whole"
 
         case .calorie: return "cal"
@@ -77,6 +79,7 @@ enum Unit: ValueType {
         case .pill: return "pills"
         case .slice: return "slices"
         case .tablespoon: return "tbsps"
+        case .teaspoon: return "tsps"
         case .whole: return "whole"
 
         case .calorie: return "cals"
@@ -103,6 +106,7 @@ enum Unit: ValueType {
         options.append(piece)
         options.append(slice)
         options.append(tablespoon)
+        options.append(teaspoon)
         options.append(whole)
         return options
     }

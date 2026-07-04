@@ -65,6 +65,10 @@ def main():
     apply = "--apply" in sys.argv
     text = open(SEED, encoding="utf-8").read()
     rows = parse(text)
+    if not rows:
+        sys.exit("seed data moved to ../nutrition-config/*.yaml; this script "
+                 "is obsolete — use the nutrition-plugin wholefoods tooling "
+                 "instead")
 
     by_food = {}
     for r in rows:

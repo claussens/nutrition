@@ -33,12 +33,15 @@ struct Dashboard: View {
 
     @Binding var showSummary: Bool
 
-    // Dashboard receives ingredientMgr / mealIngredientMgr from its
-    // parent's environment (MealList already injects both). They're
-    // captured here so the per-macro IngredientNutrientDetail sheets
-    // can resolve the meal-ingredient → Ingredient lookup themselves.
+    // Dashboard receives these managers from its parent's
+    // environment (MealList already injects them). They're captured
+    // here so the per-macro IngredientNutrientDetail sheets can run
+    // the shared MealResolver (Food→variant) lookup themselves —
+    // sheets get a fresh environment, so each must be re-injected.
     @EnvironmentObject var ingredientMgr: IngredientMgr
     @EnvironmentObject var mealIngredientMgr: MealIngredientMgr
+    @EnvironmentObject var foodMgr: FoodMgr
+    @EnvironmentObject var profileMgr: ProfileMgr
 
     @State private var showFatDetail: Bool = false
     @State private var showNCarbsDetail: Bool = false
@@ -89,6 +92,8 @@ struct Dashboard: View {
                                            valueFor: { $0.fat100 })
                     .environmentObject(ingredientMgr)
                     .environmentObject(mealIngredientMgr)
+                    .environmentObject(foodMgr)
+                    .environmentObject(profileMgr)
               }
           }
           .sheet(isPresented: $showNCarbsDetail) {
@@ -99,6 +104,8 @@ struct Dashboard: View {
                                            valueFor: { $0.netCarbs100 })
                     .environmentObject(ingredientMgr)
                     .environmentObject(mealIngredientMgr)
+                    .environmentObject(foodMgr)
+                    .environmentObject(profileMgr)
               }
           }
           .sheet(isPresented: $showProteinDetail) {
@@ -109,6 +116,8 @@ struct Dashboard: View {
                                            valueFor: { $0.protein100 })
                     .environmentObject(ingredientMgr)
                     .environmentObject(mealIngredientMgr)
+                    .environmentObject(foodMgr)
+                    .environmentObject(profileMgr)
               }
           }
     }

@@ -122,6 +122,10 @@ def derive(rec, name, cost, serv_g):
 def main():
     apply = "--apply" in sys.argv
     text = open(SEED, encoding="utf-8").read()
+    if APPEND not in text:
+        sys.exit("seed data moved to ../nutrition-config/*.yaml; this script "
+                 "is obsolete — use the nutrition-plugin wholefoods tooling "
+                 "instead")
     wf = {r["name"]: r for r in json.load(open(WF))}
 
     edits, unresolved = [], []

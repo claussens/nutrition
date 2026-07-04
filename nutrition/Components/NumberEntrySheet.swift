@@ -51,7 +51,12 @@ struct NumberEntrySheet: View {
                   }
                   ToolbarItem(placement: .primaryAction) {
                       Button("Save") {
-                          if let value = Double(text) {
+                          // Values may display with grouping ("2,150"),
+                          // so parse via a .decimal NumberFormatter
+                          // first, falling back to Double(text).
+                          let formatter = NumberFormatter()
+                          formatter.numberStyle = .decimal
+                          if let value = formatter.number(from: text)?.doubleValue ?? Double(text) {
                               onSave(value)
                           }
                           presentationMode.wrappedValue.dismiss()

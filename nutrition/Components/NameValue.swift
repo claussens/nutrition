@@ -302,11 +302,11 @@ struct NVTextField<T: ValueType>: View {
             // valueScalerType). On any mismatch, skip the write
             // instead of trapping — the field keeps its prior value.
             if valueScalerType == .double {
-                if let parsed = Double(string), let v = parsed as? T {
+                if let parsed = parseDouble(string), let v = parsed as? T {
                     $value.wrappedValue = v
                 }
             } else if valueScalerType == .int {
-                if let parsed = Int(string), let v = parsed as? T {
+                if let parsed = parseInt(string), let v = parsed as? T {
                     $value.wrappedValue = v
                 }
             } else {
@@ -338,4 +338,28 @@ struct NVTextField<T: ValueType>: View {
           .onSubmit {
           }
     }
+}
+
+
+// Parse a user-visible number back to a scalar.  Values are DISPLAYED
+// through a grouping NumberFormatter ("2,150"), so first try a
+// formatter configured like the display (.decimal), then fall back to
+// plain Double/Int parsing.  Empty/invalid strings return nil (no
+// write), same as before.
+fileprivate func parseDouble(_ string: String) -> Double? {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    if let number = formatter.number(from: string) {
+        return number.doubleValue
+    }
+    return Double(string)
+}
+
+fileprivate func parseInt(_ string: String) -> Int? {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    if let number = formatter.number(from: string) {
+        return number.intValue
+    }
+    return Int(string)
 }

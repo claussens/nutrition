@@ -273,6 +273,10 @@ def main():
 
     text = open(SEED, encoding="utf-8").read()
     rows = parse_seed(text)
+    if not rows:
+        sys.exit("seed data moved to ../nutrition-config/*.yaml; this script "
+                 "is obsolete — use the nutrition-plugin wholefoods tooling "
+                 "instead")
     if args.limit:
         rows = rows[:args.limit]
     print(f"{len(rows)} Ingredient entries carry a Whole Foods URL.")

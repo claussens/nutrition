@@ -17,17 +17,15 @@ struct MealIngredientDetail: View {
     let mealIngredient: MealIngredient
 
 
-    // Every meal row is a Food; resolve to that Food's current
-    // ingredient (global selection), else any surviving member.
+    // Row-aware Food→variant resolution shared with the macro
+    // engine (selected member → profile pref → Food default), so
+    // the cost and V&M sections describe the same variant whose
+    // macros are shown above them.
     private func resolvedIngredient() -> Ingredient? {
-        if let f = foodMgr.getByName(name: mealIngredient.name),
-           let i = ingredientMgr.getByName(name: f.currentIngredientName) {
-            return i
-        }
-        if let i = ingredientMgr.getByName(name: mealIngredient.name) {
-            return i
-        }
-        return ingredientMgr.getAll().first { $0.foodName == mealIngredient.name }
+        MealResolver(ingredientMgr: ingredientMgr,
+                     foodMgr: foodMgr,
+                     profile: profileMgr.profile)
+          .resolvedIngredient(mealIngredient)
     }
 
     var body: some View {
