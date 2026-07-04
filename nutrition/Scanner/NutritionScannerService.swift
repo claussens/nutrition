@@ -23,6 +23,7 @@ enum NutritionScannerError: LocalizedError {
     case invalidResponse
     case server(status: Int, body: String)
     case noToolUseInResponse
+    case truncated
     case decoding(Error)
     case encoding(Error)
     case transport(Error)
@@ -37,6 +38,8 @@ enum NutritionScannerError: LocalizedError {
             return "Anthropic error \(status): \(body)"
         case .noToolUseInResponse:
             return "Model didn't return a structured result. Try again or with a clearer photo."
+        case .truncated:
+            return "The model's reply was cut off before it finished (max_tokens). Try again, or with fewer photos."
         case .decoding(let err):
             return "Couldn't decode the model's reply: \(err.localizedDescription)"
         case .encoding(let err):
@@ -92,23 +95,7 @@ struct NutritionScannerService {
         let payload = try buildRequestBody(images: images, existingNames: existingNames)
         let request = try buildURLRequest(apiKey: apiKey, body: payload)
 
-        // Use a 60s timeout — vision calls on Sonnet are typically
-        // 3-10s but cold connections can be slower.
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch {
-            throw NutritionScannerError.transport(error)
-        }
-
-        guard let http = response as? HTTPURLResponse else {
-            throw NutritionScannerError.invalidResponse
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw NutritionScannerError.server(status: http.statusCode, body: body)
-        }
-
+        let data = try await send(request)
         return try decodeToolUse(from: data)
     }
 
@@ -130,20 +117,58 @@ struct NutritionScannerService {
         let payload = buildVerifyBody(ingredient: ingredient)
         let request = try buildURLRequest(apiKey: apiKey, body: payload)
 
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch {
-            throw NutritionScannerError.transport(error)
-        }
-        guard let http = response as? HTTPURLResponse else {
-            throw NutritionScannerError.invalidResponse
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw NutritionScannerError.server(status: http.statusCode, body: body)
-        }
+        let data = try await send(request)
         return try decodeToolUse(from: data)
+    }
+
+
+    // ============================================================
+    // Shared request sender with retry. Transient failures —
+    // flaky network, 429 rate limiting, 5xx server errors — get
+    // up to 3 attempts with a short backoff (~1s, then ~2s).
+    // Task.sleep is used for the backoff so cancellation
+    // propagates instead of stalling. Anything non-transient
+    // (other 4xx, a non-HTTP response) throws immediately with
+    // the same error mapping the callers always used, and the
+    // final failed attempt keeps the same status→error semantics.
+    // ============================================================
+    private static func send(_ request: URLRequest) async throws -> Data {
+        let retryableURLCodes: Set<URLError.Code> = [
+            .timedOut, .networkConnectionLost, .cannotConnectToHost, .dnsLookupFailed
+        ]
+        let maxAttempts = 3
+
+        for attempt in 1...maxAttempts {
+            let isLastAttempt = attempt == maxAttempts
+
+            let data: Data
+            let response: URLResponse
+            do {
+                (data, response) = try await URLSession.shared.data(for: request)
+            } catch let err as URLError where retryableURLCodes.contains(err.code) && !isLastAttempt {
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                throw NutritionScannerError.transport(error)
+            }
+
+            guard let http = response as? HTTPURLResponse else {
+                throw NutritionScannerError.invalidResponse
+            }
+            guard (200..<300).contains(http.statusCode) else {
+                let retryable = http.statusCode == 429
+                  || (500...599).contains(http.statusCode)
+                if retryable && !isLastAttempt {
+                    try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                    continue
+                }
+                let body = String(data: data, encoding: .utf8) ?? ""
+                throw NutritionScannerError.server(status: http.statusCode, body: body)
+            }
+            return data
+        }
+        // Unreachable — every loop path either returns or throws.
+        throw NutritionScannerError.invalidResponse
     }
 
 
@@ -151,7 +176,9 @@ struct NutritionScannerService {
         // Compact snapshot of the stored values so the model can
         // compare and only flag genuine differences.
         func n(_ v: Double) -> String {
-            v == v.rounded() ? String(Int(v)) : String(format: "%.2f", v)
+            // String(format:) rather than String(Int(v)) — Int() traps
+            // on huge or non-finite doubles from config data.
+            v == v.rounded() ? String(format: "%.0f", v) : String(format: "%.2f", v)
         }
         // One "id: value" pair per scannable nutrient, 5 per line —
         // driven by the catalog so verify re-checks every nutrient the
@@ -393,6 +420,12 @@ struct NutritionScannerService {
             // Preserve the underlying JSON error so a malformed top-level
             // response is diagnosable rather than an opaque "invalid".
             throw NutritionScannerError.decoding(error)
+        }
+        // A max_tokens truncation can carry a mangled or absent
+        // tool_use block — without this check that surfaces as a
+        // misleading "didn't return a structured result".
+        if (root["stop_reason"] as? String) == "max_tokens" {
+            throw NutritionScannerError.truncated
         }
         guard let blocks = root["content"] as? [[String: Any]] else {
             throw NutritionScannerError.invalidResponse

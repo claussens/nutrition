@@ -20,7 +20,6 @@
 		342F816927D42D1600B16B9E /* MealIngredient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 342F816827D42D1600B16B9E /* MealIngredient.swift */; };
 		344D200227CDC53800343108 /* MealConfigure.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344D200127CDC53700343108 /* MealConfigure.swift */; };
 		344D200627CE299D00343108 /* MealList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344D200527CE299D00343108 /* MealList.swift */; };
-		344D200827CE2B4E00343108 /* MealAdd.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344D200727CE2B4E00343108 /* MealAdd.swift */; };
 		344D200C27CE345B00343108 /* Adjustment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344D200B27CE345B00343108 /* Adjustment.swift */; };
 		344D200E27CE35F100343108 /* AdjustmentList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344D200D27CE35F100343108 /* AdjustmentList.swift */; };
 		344D201027CE360C00343108 /* AdjustmentEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344D200F27CE360C00343108 /* AdjustmentEdit.swift */; };
@@ -43,7 +42,6 @@
 		349EE57627CBF3600072255A /* NameValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE57527CBF3600072255A /* NameValue.swift */; };
 		349EE57827CC10E60072255A /* Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE57727CC10E60072255A /* Profile.swift */; };
 		349EE57C27CC823B0072255A /* ProfileEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE57B27CC823B0072255A /* ProfileEdit.swift */; };
-		34DC9A3A27E8D99B0082D62E /* CheckboxToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34DC9A3927E8D99B0082D62E /* CheckboxToggle.swift */; };
 		34DE41FD27F64CFE0078448F /* Gauge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34DE41FC27F64CFE0078448F /* Gauge.swift */; };
 		34DE420127F654B20078448F /* Scalers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34DE420027F654B20078448F /* Scalers.swift */; };
 		34E3237A28F2542900832D9C /* VitaminMineralList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34E3237728F2542900832D9C /* VitaminMineralList.swift */; };
@@ -65,7 +63,6 @@
 		FE0200000000000000000001 /* IngredientNutrientDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0100000000000000000001 /* IngredientNutrientDetail.swift */; };
 		FE0200000000000000000002 /* IngredientCostDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0100000000000000000002 /* IngredientCostDetail.swift */; };
 		FE0200000000000000000003 /* Food.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0100000000000000000003 /* Food.swift */; };
-		FE0200000000000000000004 /* GroupMemberPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0100000000000000000004 /* GroupMemberPicker.swift */; };
 		FE0200000000000000000005 /* DayLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0100000000000000000005 /* DayLog.swift */; };
 		FE0200000000000000000006 /* DayLogMgr.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0100000000000000000006 /* DayLogMgr.swift */; };
 		FE0200000000000000000007 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0100000000000000000007 /* HistoryView.swift */; };
@@ -82,6 +79,7 @@
 		FF0200000000000000000023 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0100000000000000000013 /* SettingsView.swift */; };
 		FF0200000000000000000024 /* VerifyAllWalkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0100000000000000000014 /* VerifyAllWalkthrough.swift */; };
 		FE0200000000000000000009 /* MealPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0100000000000000000009 /* MealPlanner.swift */; };
+		FE0200000000000000000010 /* IngredientFormSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0100000000000000000012 /* IngredientFormSections.swift */; };
 		AA0200000000000000000001 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000001 /* TestSupport.swift */; };
 		AA0200000000000000000002 /* MealPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000002 /* MealPlannerTests.swift */; };
 		AA0200000000000000000003 /* MealResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000003 /* MealResolverTests.swift */; };
@@ -116,7 +114,6 @@
 		342F816827D42D1600B16B9E /* MealIngredient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealIngredient.swift; sourceTree = "<group>"; };
 		344D200127CDC53700343108 /* MealConfigure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealConfigure.swift; sourceTree = "<group>"; };
 		344D200527CE299D00343108 /* MealList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealList.swift; sourceTree = "<group>"; };
-		344D200727CE2B4E00343108 /* MealAdd.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealAdd.swift; sourceTree = "<group>"; };
 		344D200B27CE345B00343108 /* Adjustment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Adjustment.swift; sourceTree = "<group>"; };
 		344D200D27CE35F100343108 /* AdjustmentList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentList.swift; sourceTree = "<group>"; };
 		344D200F27CE360C00343108 /* AdjustmentEdit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentEdit.swift; sourceTree = "<group>"; };
@@ -140,7 +137,6 @@
 		349EE57527CBF3600072255A /* NameValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameValue.swift; sourceTree = "<group>"; };
 		349EE57727CC10E60072255A /* Profile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Profile.swift; sourceTree = "<group>"; };
 		349EE57B27CC823B0072255A /* ProfileEdit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileEdit.swift; sourceTree = "<group>"; };
-		34DC9A3927E8D99B0082D62E /* CheckboxToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckboxToggle.swift; sourceTree = "<group>"; };
 		34DE41FC27F64CFE0078448F /* Gauge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gauge.swift; sourceTree = "<group>"; };
 		34DE420027F654B20078448F /* Scalers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Scalers.swift; sourceTree = "<group>"; };
 		34E3237728F2542900832D9C /* VitaminMineralList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VitaminMineralList.swift; sourceTree = "<group>"; };
@@ -161,7 +157,6 @@
 		FE0100000000000000000001 /* IngredientNutrientDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientNutrientDetail.swift; sourceTree = "<group>"; };
 		FE0100000000000000000002 /* IngredientCostDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientCostDetail.swift; sourceTree = "<group>"; };
 		FE0100000000000000000003 /* Food.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Food.swift; sourceTree = "<group>"; };
-		FE0100000000000000000004 /* GroupMemberPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupMemberPicker.swift; sourceTree = "<group>"; };
 		FE0100000000000000000005 /* DayLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayLog.swift; sourceTree = "<group>"; };
 		FE0100000000000000000006 /* DayLogMgr.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayLogMgr.swift; sourceTree = "<group>"; };
 		FE0100000000000000000007 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
@@ -178,6 +173,7 @@
 		FF0100000000000000000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		FF0100000000000000000014 /* VerifyAllWalkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifyAllWalkthrough.swift; sourceTree = "<group>"; };
 		FE0100000000000000000009 /* MealPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanner.swift; sourceTree = "<group>"; };
+		FE0100000000000000000012 /* IngredientFormSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientFormSections.swift; sourceTree = "<group>"; };
 		AA0100000000000000000001 /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
 		AA0100000000000000000002 /* MealPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlannerTests.swift; sourceTree = "<group>"; };
 		AA0100000000000000000003 /* MealResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealResolverTests.swift; sourceTree = "<group>"; };
@@ -310,7 +306,6 @@
 			children = (
 				3405D4A928EA4AD10031BEE2 /* VitaminMineralRow.swift */,
 				349EE57527CBF3600072255A /* NameValue.swift */,
-				34DC9A3927E8D99B0082D62E /* CheckboxToggle.swift */,
 				345F5F0927E0EF1400129BAC /* IngredientRow.swift */,
 				347A335527DA925C005E3F33 /* Unit.swift */,
 				342CD49827E26F3C008703C2 /* HealthStore.swift */,
@@ -327,7 +322,6 @@
 				344D200527CE299D00343108 /* MealList.swift */,
 				FE0100000000000000000009 /* MealPlanner.swift */,
 				344D200127CDC53700343108 /* MealConfigure.swift */,
-				344D200727CE2B4E00343108 /* MealAdd.swift */,
 				342F816827D42D1600B16B9E /* MealIngredient.swift */,
 				34F8003A27DBFAD1002F1380 /* Macros.swift */,
 				3402286D27D8298E00741FBB /* Dashboard.swift */,
@@ -336,7 +330,6 @@
 				5F73DCC1042045FC0D1D224E /* MealIngredientDetail.swift */,
 				FE0100000000000000000001 /* IngredientNutrientDetail.swift */,
 				FE0100000000000000000002 /* IngredientCostDetail.swift */,
-				FE0100000000000000000004 /* GroupMemberPicker.swift */,
 			);
 			path = Meal;
 			sourceTree = "<group>";
@@ -360,6 +353,7 @@
 				349EE54327C9A3690072255A /* IngredientList.swift */,
 				347A335727DAA1FE005E3F33 /* IngredientAdd.swift */,
 				349EE54A27C9A6B10072255A /* IngredientEdit.swift */,
+				FE0100000000000000000012 /* IngredientFormSections.swift */,
 			);
 			path = Ingredients;
 			sourceTree = "<group>";
@@ -555,7 +549,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				344D200827CE2B4E00343108 /* MealAdd.swift in Sources */,
 				344D200E27CE35F100343108 /* AdjustmentList.swift in Sources */,
 				34E3237B28F2542900832D9C /* VitaminMineralType.swift in Sources */,
 				347A335627DA925C005E3F33 /* Unit.swift in Sources */,
@@ -585,12 +578,12 @@
 				344D201027CE360C00343108 /* AdjustmentEdit.swift in Sources */,
 				34DE41FD27F64CFE0078448F /* Gauge.swift in Sources */,
 				349EE53127C99AC30072255A /* NutritionApp.swift in Sources */,
-				34DC9A3A27E8D99B0082D62E /* CheckboxToggle.swift in Sources */,
 				349EE57627CBF3600072255A /* NameValue.swift in Sources */,
 				349EE57827CC10E60072255A /* Profile.swift in Sources */,
 				344D200627CE299D00343108 /* MealList.swift in Sources */,
 				FE0200000000000000000009 /* MealPlanner.swift in Sources */,
 				347A335827DAA1FE005E3F33 /* IngredientAdd.swift in Sources */,
+				FE0200000000000000000010 /* IngredientFormSections.swift in Sources */,
 				9EFED2D8597BBE4683EDBFBE /* VitaminMineralActuals.swift in Sources */,
 				C575CA58D52D8B6140F52ACE /* VitaminMineralContributors.swift in Sources */,
 				1BF393D5C1991B2485D95BF7 /* DailySummary.swift in Sources */,
@@ -611,7 +604,6 @@
 				FE0200000000000000000001 /* IngredientNutrientDetail.swift in Sources */,
 				FE0200000000000000000002 /* IngredientCostDetail.swift in Sources */,
 				FE0200000000000000000003 /* Food.swift in Sources */,
-				FE0200000000000000000004 /* GroupMemberPicker.swift in Sources */,
 				FE0200000000000000000005 /* DayLog.swift in Sources */,
 				FE0200000000000000000006 /* DayLogMgr.swift in Sources */,
 				FE0200000000000000000007 /* HistoryView.swift in Sources */,

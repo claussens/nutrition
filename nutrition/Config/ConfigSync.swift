@@ -1,5 +1,4 @@
 import Foundation
-import Security
 import Yams
 
 // ============================================================================
@@ -99,7 +98,7 @@ enum ConfigSync {
     /// - Returns: `.applied` when data changed, `.upToDate` when it didn't.
     static func refresh() async throws -> Result {
         // 1. Credential — read the PAT from the Keychain.
-        guard let token = ConfigKeychain.githubToken(), !token.isEmpty else {
+        guard let token = KeychainStore.githubToken(), !token.isEmpty else {
             throw ConfigSyncError.missingToken
         }
 
@@ -354,93 +353,5 @@ enum ConfigSync {
             + "\(data.meals.count) meal profile(s)/\(mealRows) rows, "
             + "\(data.supplements.count) supplement profile(s)/\(supplementCount) entries, "
             + "\(data.rda.count) RDA nutrients."
-    }
-}
-
-// ----------------------------------------------------------------------------
-// ConfigKeychain — GitHub PAT storage
-// ----------------------------------------------------------------------------
-//
-// The existing `KeychainStore` only exposes the Anthropic key and keeps its
-// internals `private`, so we can't extend it from here. This mirrors its exact
-// conventions (same service identifier, on-device-only accessibility) but under
-// a distinct `github-pat` account, so the GitHub PAT lives alongside the
-// Anthropic key without colliding. If KeychainStore later grows a native
-// `githubToken()`/`setGitHubToken()` pair, callers can switch to it and this
-// helper can be deleted.
-enum ConfigKeychain {
-
-    private static let service = "com.sclaussen.nutrition"
-    private static let githubAccount = "github-pat"
-
-    /// The stored GitHub personal access token, or nil if none is set.
-    static func githubToken() -> String? {
-        #if DEBUG
-        // Test override: a token supplied via the launch environment
-        // (SIMCTL_CHILD_GITHUB_API_KEY in the Simulator) takes precedence so we
-        // can exercise refresh without pasting into a SecureField — and without
-        // a stale Keychain entry shadowing it. Never compiled into release.
-        if let env = ProcessInfo.processInfo.environment["GITHUB_API_KEY"],
-           !env.isEmpty {
-            return env
-        }
-        #endif
-        if let stored = read(account: githubAccount), !stored.isEmpty {
-            return stored
-        }
-        return nil
-    }
-
-    /// Store (or clear, when empty) the GitHub personal access token.
-    static func setGitHubToken(_ value: String) {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            delete(account: githubAccount)
-        } else {
-            write(account: githubAccount, value: trimmed)
-        }
-    }
-
-    // --- Internals (same shape as KeychainStore) ----------------------------
-
-    private static func baseQuery(account: String) -> [String: Any] {
-        [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
-    }
-
-    private static func read(account: String) -> String? {
-        var query = baseQuery(account: account)
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess,
-              let data = item as? Data,
-              let value = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-        return value
-    }
-
-    private static func write(account: String, value: String) {
-        let data = Data(value.utf8)
-        var query = baseQuery(account: account)
-        query[kSecValueData as String] = data
-        query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-
-        let addStatus = SecItemAdd(query as CFDictionary, nil)
-        if addStatus == errSecDuplicateItem {
-            let update: [String: Any] = [kSecValueData as String: data]
-            SecItemUpdate(baseQuery(account: account) as CFDictionary,
-                          update as CFDictionary)
-        }
-    }
-
-    private static func delete(account: String) {
-        SecItemDelete(baseQuery(account: account) as CFDictionary)
     }
 }

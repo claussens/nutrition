@@ -41,35 +41,58 @@ class DayLogMgr: ObservableObject {
     }
 
 
-    init() {
+    init(activeProfileId: String) {
         if let data = try? Data(contentsOf: DayLogMgr.fileURL),
            let logs = try? JSONDecoder().decode([DayLog].self, from: data) {
             self.logs = logs.sorted { $0.date > $1.date }
+            migrateLegacyLogs(to: activeProfileId)
             return
         }
         self.logs = []
     }
 
 
+    // P0.5 migration: assign legacy global history to the profile
+    // that was active at first launch after the update. Idempotent —
+    // logs decoded with an empty profileId (pre-multi-profile
+    // entries) get stamped with the active profile and their plain
+    // "yyyy-MM-dd" id rewritten to the composite "<profileId>|<day>"
+    // form, then serialized once. Already-stamped logs are untouched.
+    private func migrateLegacyLogs(to activeProfileId: String) {
+        var migrated = false
+        for i in logs.indices where logs[i].profileId.isEmpty {
+            logs[i].profileId = activeProfileId
+            logs[i].id = "\(activeProfileId)|\(logs[i].id)"
+            migrated = true
+        }
+        if migrated {
+            serialize()
+        }
+    }
+
+
     // Build today's snapshot from values already computed by
-    // DailySummary and upsert it by calendar day (replace any
-    // existing log for the same day), newest first.
-    func logToday(entries: [DayLogEntry],
+    // DailySummary and upsert it by profile + calendar day (replace
+    // any existing log for the same profile and day), newest first.
+    func logToday(profileId: String,
+                  entries: [DayLogEntry],
                   totals: DayLogTotals,
                   vitamins: [DayLogVM],
                   body: DayLogBody) {
 
         let now = Date()
         let key = DayLogMgr.dayKey(for: now)
+        let id = "\(profileId)|\(key)"
 
-        let log = DayLog(id: key,
+        let log = DayLog(id: id,
+                         profileId: profileId,
                          date: now,
                          entries: entries,
                          totals: totals,
                          vitamins: vitamins,
                          body: body)
 
-        var updated = logs.filter { $0.id != key }
+        var updated = logs.filter { $0.id != id }
         updated.append(log)
         self.logs = updated.sorted { $0.date > $1.date }
 

@@ -117,7 +117,6 @@ struct IngredientEdit: View {
     @EnvironmentObject var foodMgr: FoodMgr
     @EnvironmentObject var profileMgr: ProfileMgr
 
-    @State private var newGroupName = ""
     // Category for a brand-new Food created from this screen. An
     // existing Food's type is inherited and never edited here.
     @State private var newFoodType: IngredientType = .produce
@@ -133,6 +132,9 @@ struct IngredientEdit: View {
     @State private var verifyError: String? = nil
     @State private var verifyNote: String? = nil
     @State private var verifyReview: VerifyReview? = nil
+    // The in-flight verify Task, held so a re-tap or dismissing the
+    // screen cancels it instead of leaving it running.
+    @State private var verifyTask: Task<Void, Never>? = nil
 
     // Identity / price-ish fields are never auto-applied — they
     // always go through review (price is web-approximate; name/
@@ -166,11 +168,12 @@ struct IngredientEdit: View {
                 LowConfidenceBanner(fields: prefill.lowConfidenceFields)
             }
             avoidSection
-            mainSections
-            groupSection
+            nameSection
+            IngredientFormSections(ingredient: $ingredient,
+                                   mode: .edit,
+                                   newFoodType: $newFoodType)
             verifySection
             autoAdjustSection
-            vitaminAndMineralsSection
             per100GramsSection
         }
           .sheet(isPresented: $showAutoAdjust) {
@@ -184,6 +187,7 @@ struct IngredientEdit: View {
           }
           .padding([.leading, .trailing], -20)
           .onAppear { applyPrefill() }
+          .onDisappear { verifyTask?.cancel() }
           .cancelSaveToolbar(onCancel: cancel, onSave: save)
     }
 
@@ -209,44 +213,16 @@ struct IngredientEdit: View {
     }
 }
 
-//struct IngredientEdit_Previews: PreviewProvider {
-//    static var previews: some View {
-//        NavigationView {
-//            IngredientEdit(ingredient: Ingredient(name: "Chicken", productName: "Butcher Box", servingSize: 200, calories: 180, fat: 2, fiber: 1, netCarbs: 0.5, protein: 10, consumptionUnit: .gram, consumptionGrams: 100))
-//        }
-//    }
-//}
-
-
 extension IngredientEdit {
 
-    // ============================================================
-    // Apply LLM-parsed values to the bound `ingredient`. Only
-    // touches fields the LLM actually filled in (non-nil), so any
-    // existing values are preserved when the label didn't show
-    // them.
-    // ============================================================
+    // Apply LLM-parsed values to the bound `ingredient` via the
+    // shared Ingredient.applyParsed (IngredientFormSections.swift) —
+    // only fields the LLM actually filled in (non-nil) are touched,
+    // so any existing values are preserved when the label didn't
+    // show them.
     fileprivate func applyPrefill() {
         guard let p = prefill else { return }
-
-        if !p.name.isEmpty { ingredient.name = p.name }
-        if let v = p.brand    { ingredient.brand = v }
-        if let v = p.fullName { ingredient.fullName = v }
-        if let v = p.url      { ingredient.url = v }
-        if let v = p.ingredientsList { ingredient.ingredients = v }
-        if let v = p.allergens       { ingredient.allergens = v }
-
-        if let v = p.servingSize      { ingredient.servingSize = v }
-
-        if p.consumptionUnit != nil { ingredient.consumptionUnit = p.consumptionUnitEnum }
-        if let v = p.consumptionGrams { ingredient.consumptionGrams = v }
-
-        // Macros + V&M — every scannable nutrient in the catalog.
-        for d in NutrientCatalog.scannable {
-            if let v = p[keyPath: d.parsed!] {
-                ingredient[keyPath: d.ingredient] = v
-            }
-        }
+        ingredient.applyParsed(p)
     }
 
 
@@ -324,104 +300,23 @@ extension IngredientEdit {
         )
     }
 
-    private var mainSections: some View {
-        Group {
-            Section {
-                Picker("Food", selection: Binding(
-                    get: { ingredient.foodName },
-                    set: { newFood in
-                        // Recompose name with the variant carried over
-                        // from the previous Food prefix. The FoodMgr
-                        // mutation (ensure) is deferred to save() so a
-                        // cancelled edit leaves FoodMgr untouched.
-                        let v = Self.variant(of: ingredient.name,
-                                             food: ingredient.foodName)
-                        ingredient.foodName = newFood
-                        let n = Self.compose(food: newFood, variant: v)
-                        if !n.isEmpty { ingredient.name = n }
-                    }
-                )) {
-                    Text("None").tag("")
-                    ForEach(foodMgr.namesSorted, id: \.self) { g in
-                        Text(g).tag(g)
-                    }
-                }
-                NameValue("Name", variantBinding, edit: true)
-            }
-            Section(header: Text("Optional Product Details")) {
-                NameValue("URL", $ingredient.url, edit: true)
-                NameValue("Brand", $ingredient.brand, edit: true)
-                NameValue("Cost", $ingredient.totalCost, .dollar, precision: 2, edit: true)
-                NameValue("Grams", description: "total ingredient grams in the product", $ingredient.totalGrams, edit: true)
-                NameValue("Cost / 100g", description: "computed: cost ÷ grams × 100", $ingredient.costPer100, .dollar, precision: 2)
-            }
-            Section(header: Text("Macronutrients")) {
-                NameValue("Serving Size", $ingredient.servingSize, edit: true)
-                NameValue("Calories", $ingredient.calories, .calorie, edit: true)
-                NameValue("Fat", $ingredient.fat, edit: true)
-                NameValue("Fiber", $ingredient.fiber, edit: true)
-                NameValue("Net Carbs", $ingredient.netCarbs, edit: true)
-                NameValue("Protein", $ingredient.protein, edit: true)
-            }
-            Section(header: Text("Preparation/Consumption Unit")) {
-                NameValue("Consumption Unit", description: "preferred meal prep/consumption unit", $ingredient.consumptionUnit, options: Unit.ingredientOptions(), control: .picker)
-                NameValue("Grams / Consumption Unit", description: "grams per each prep/consumption unit", $ingredient.consumptionGrams, edit: true)
-                NameValue("Step amount", description: "0 = auto by unit & serving size", $ingredient.stepAmount, ingredient.consumptionUnit, edit: true)
-                // Per-profile default. Keyed by Food name so every
-                // variant of the same Food shows the active profile's
-                // single shared value. 0 here = no override -> falls
-                // back to ingredient.defaultAmount then Food default.
-                NameValue("Default amount (\(profileMgr.profile.name))",
-                          description: "seed amount when this Food is added to a meal; per active profile",
-                          Binding(
-                            get: { profileMgr.profile.defaults[ingredient.foodName] ?? 0 },
-                            set: { profileMgr.setDefault(foodName: ingredient.foodName, amount: $0) }
-                          ),
-                          ingredient.consumptionUnit,
-                          edit: true)
-                // Per-profile preferred variant. When ON, this profile
-                // resolves the "\(ingredient.foodName)" Food to THIS
-                // variant in meal rows, eye-picker adds, and auto-
-                // adjust — overriding the Food's global default
-                // (Food.currentIngredientName). Per-row
-                // selectedMemberName still wins over this.
-                NameValue("Default variant for \(ingredient.foodName) (\(profileMgr.profile.name))",
-                          description: "use this variant whenever this Food is added or auto-adjusted",
-                          Binding<Bool>(
-                            get: { profileMgr.profile.foodMember[ingredient.foodName] == ingredient.name },
-                            set: { isOn in
-                                profileMgr.setFoodMember(
-                                    foodName: ingredient.foodName,
-                                    ingredientName: isOn ? ingredient.name : nil)
-                            }
-                          ),
-                          control: .toggle)
-            }
-        }
-    }
-
-    // Group / variant membership. Picking or creating a group makes
-    // this ingredient a member; the group is the thing added to a
-    // meal and members are swapped via long-press on the meal row.
-    // Group-entity changes (create / default) are applied to FoodMgr
-    // immediately; the foodName link persists when the ingredient is
-    // saved.
-    private var isGroupDefault: Bool {
-        guard !ingredient.foodName.isEmpty else { return false }
-        return foodMgr.getByName(name: ingredient.foodName)?.currentIngredientName == ingredient.name
-    }
-
-    private var groupSection: some View {
-        Section(header: Text("Food"),
-                footer: Text("Optional. Ingredients sharing a Food are collapsed to one meal row; long-press that row in the meal to pick which variant.")
-                  .font(.caption2)) {
-
+    // Edit-only header: the Food picker + variant Name composition.
+    // Add has no saved name to decompose, so this stays here rather
+    // than in the shared IngredientFormSections.
+    private var nameSection: some View {
+        Section {
             Picker("Food", selection: Binding(
                 get: { ingredient.foodName },
-                set: { newValue in
-                    // FoodMgr mutation (ensure) deferred to save() so a
+                set: { newFood in
+                    // Recompose name with the variant carried over
+                    // from the previous Food prefix. The FoodMgr
+                    // mutation (ensure) is deferred to save() so a
                     // cancelled edit leaves FoodMgr untouched.
-                    ingredient.foodName = newValue
+                    let v = Self.variant(of: ingredient.name,
+                                         food: ingredient.foodName)
+                    ingredient.foodName = newFood
+                    let n = Self.compose(food: newFood, variant: v)
+                    if !n.isEmpty { ingredient.name = n }
                 }
             )) {
                 Text("None").tag("")
@@ -429,43 +324,7 @@ extension IngredientEdit {
                     Text(g).tag(g)
                 }
             }
-
-            // Category only applies when creating a brand-new Food;
-            // selecting an existing Food inherits its category.
-            Picker("New Food Type", selection: $newFoodType) {
-                ForEach(IngredientType.allCases) { t in
-                    Text(t.label).tag(t)
-                }
-            }
-              .pickerStyle(.menu)
-
-            HStack {
-                TextField("New Food\u{2026}", text: $newGroupName)
-                  .autocorrectionDisabled()
-                Button("Create") {
-                    let trimmed = newGroupName.trimmingCharacters(in: .whitespaces)
-                    guard !trimmed.isEmpty else { return }
-                    ingredient.foodName = trimmed
-                    foodMgr.ensure(name: trimmed,
-                                   defaultMember: ingredient.name,
-                                   type: newFoodType)
-                    newGroupName = ""
-                }
-                  .disabled(newGroupName.trimmingCharacters(in: .whitespaces).isEmpty)
-                  .foregroundColor(Color.theme.blueYellow)
-            }
-
-            if !ingredient.foodName.isEmpty {
-                Toggle("Default variant of this Food", isOn: Binding(
-                    get: { isGroupDefault },
-                    set: { on in
-                        if on {
-                            foodMgr.setCurrent(food: ingredient.foodName,
-                                               member: ingredient.name)
-                        }
-                    }
-                ))
-            }
+            NameValue("Name", variantBinding, edit: true)
         }
     }
 
@@ -479,7 +338,9 @@ extension IngredientEdit {
                 showAutoAdjust = true
             } label: {
                 if let rule = adjustmentMgr.getByName(name: ingredient.name) {
-                    Label("Auto-adjust: +\(Int(rule.amount)) per cycle",
+                    // formattedString instead of Int(_) — the Int
+                    // initializer traps on non-finite/huge doubles.
+                    Label("Auto-adjust: +\(rule.amount.formattedString(0)) per cycle",
                           systemImage: "gearshape.fill")
                       .foregroundColor(Color.theme.blueYellow)
                 } else {
@@ -499,20 +360,6 @@ extension IngredientEdit {
             NameValue("Net Carbs (per 100g)", $ingredient.netCarbs100, precision: 1)
             NameValue("Protein (per 100g)", $ingredient.protein100)
         }
-    }
-
-    // V&M fields are always visible — the previous "Add vitamins
-    // and minerals" toggle hid them by default, which made it
-    // hard to discover that V&M data could be entered at all.
-    // Now they show inline; leave a field blank to record nothing.
-    // Row set and order live in NutrientCatalog.vmFormRows.
-    private var vitaminAndMineralsSection: some View {
-        VitaminMineralForm(rows: NutrientCatalog.vmFormRows.map { d in
-            (d.label, Binding(
-                get: { ingredient[keyPath: d.ingredient] },
-                set: { ingredient[keyPath: d.ingredient] = $0 }
-            ))
-        })
     }
 }
 
@@ -630,7 +477,9 @@ struct AutoAdjustEditor: View {
 
     private func formatNumber(_ value: Double) -> String {
         if value == value.rounded() {
-            return String(Int(value))
+            // %.0f instead of Int(_) — the Int initializer traps on
+            // non-finite/huge doubles.
+            return String(format: "%.0f", value)
         }
         return String(value)
     }
@@ -681,7 +530,10 @@ extension IngredientEdit {
         verifyError = nil
         verifyNote = nil
         let snapshot = ingredient
-        Task {
+        // One verify in flight at a time — cancel any prior run, and
+        // keep the handle so onDisappear cancels it on dismiss.
+        verifyTask?.cancel()
+        verifyTask = Task {
             do {
                 let parsed = try await NutritionScannerService.verifyByName(snapshot)
                 let d = ScanDiff.compute(existing: snapshot, parsed: parsed)
@@ -715,6 +567,13 @@ extension IngredientEdit {
                     }
                 }
             } catch {
+                // A cancelled verify (screen dismissed or superseded
+                // by a re-tap) isn't an error — clear the spinner and
+                // leave verifyError alone.
+                if error is CancellationError || Task.isCancelled {
+                    await MainActor.run { isVerifying = false }
+                    return
+                }
                 await MainActor.run {
                     isVerifying = false
                     verifyError = (error as? NutritionScannerError)?.errorDescription

@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a nutrition tracking application with two main components:
-1. **iOS SwiftUI App**: The main nutrition tracking application (`nutrition/` directory)
-2. **JavaScript Utilities**: Vitamin/mineral data processing scripts (`vitamins.js`)
+This is a nutrition tracking application with a single component: the
+**iOS SwiftUI App** (`nutrition/` directory). Vitamin/mineral RDA data
+lives in the sibling `../nutrition-config` repo (`rda.yaml`), along with
+the ingredient/food seed data.
 
 The app helps users track meals, ingredients, nutritional values, and vitamin/mineral intake with automatic and manual adjustments.
 
@@ -16,10 +17,6 @@ The app helps users track meals, ingredients, nutritional values, and vitamin/mi
 - **Build Project**: Open `nutrition.xcodeproj` in Xcode and use Cmd+B to build
 - **Run on Simulator**: Open in Xcode and use Cmd+R to run
 - **Clean Build**: Product → Clean Build Folder in Xcode
-
-### JavaScript
-- **Install Dependencies**: `npm install`
-- **Run JavaScript Scripts**: `node vitamins.js`
 
 ## Architecture Overview
 
@@ -50,9 +47,9 @@ The app helps users track meals, ingredients, nutritional values, and vitamin/mi
 ### Data Architecture
 
 **Persistence:**
-- Uses `UserDefaults` with JSON encoding/decoding for data persistence
+- Uses `UserDefaults` with JSON encoding/decoding for data persistence (via `UserDefaultsStore`)
 - Each manager handles its own serialization/deserialization
-- Key-based storage: "ingredient", "mealIngredient", "adjustment", "profile", etc.
+- Key-based storage: "profiles", "activeProfileId", and per-profile namespaced keys "mealIngredient.\<profileId>", "adjustment.\<profileId>", "foodComposite.\<profileId>"
 
 **Adjustment System:**
 - **Constants.Default**: Original state
@@ -85,7 +82,6 @@ The app helps users track meals, ingredients, nutritional values, and vitamin/mi
 **Code Style (from existing CLAUDE.md):**
 - Functions organized top-down (main → helper functions)
 - Use short-circuiting in conditionals
-- Import order: node_modules first, then local modules
 - Switch statements preferred over if-else chains
 
 **SwiftUI Patterns:**
@@ -102,12 +98,11 @@ The app helps users track meals, ingredients, nutritional values, and vitamin/mi
 
 ## Key Files to Understand
 
-- `app.swift`: App entry point with dependency injection
+- `NutritionApp.swift`: App entry point with dependency injection
 - `Tabs.swift`: Main navigation structure
 - `Ingredients/Ingredient.swift`: Core data model with extensive nutrition data
 - `Meal/MealIngredient.swift`: Complex adjustment system implementation
 - `Profile/Profile.swift`: Age/gender-based nutritional calculations
-- `vitamins.js`: JavaScript utilities for vitamin/mineral data processing
 
 ## Feature Development Areas
 
@@ -120,14 +115,24 @@ The README.md contains extensive feature prioritization (P0-P4) including:
 
 ## Testing and Validation
 
-- No automated test framework currently configured
+- Automated tests: XCTest target `nutritionTests` — a characterization
+  suite for `MealPlanner` and the math core (~55 tests). Run with:
+  `xcodebuild -project nutrition.xcodeproj -scheme nutrition -destination 'platform=iOS Simulator,name=<any iPhone>' test`
 - Manual testing via iOS Simulator
 - Ingredient data verification tracked via `verified` field
 - Debug logging throughout adjustment calculations
 
-## Data Tooling — Whole Foods price/nutrition scripts (`scripts/`)
+## Data Tooling
 
-Ingredient cost is gram-based:
+**Seed data lives in `../nutrition-config`.** Ingredient/food seed data
+is YAML in the sibling `nutrition-config` repo (along with `rda.yaml`
+for vitamin/mineral RDAs) — not in this repo.
+
+**Canonical Whole Foods fetch workflow:** the `nutrition` Claude Code
+plugin's `fetching-from-wholefoods` skill (`wholefoods_fetch.py`). Use
+that for price/nutrition fetches that feed the seed data.
+
+**Cost model** — ingredient cost is gram-based:
 
 ```
 costPerGram    = totalCost / effectiveTotalGrams   (effectiveTotalGrams = totalGrams if > 0, else parsed from the name)
@@ -141,49 +146,20 @@ pill/capsule supplements `consumptionGrams` is grams *per pill*, so
 like `totalGrams: 1` makes every pill cost a whole bottle — that was a
 real bug; don't reintroduce it.
 
-**Setup (one-time; system python3 lacks pip):**
-
-```
-/Users/shane/.pyenv/versions/3.10.4/bin/python3 -m venv scripts/.venv
-scripts/.venv/bin/python -m pip install playwright
-scripts/.venv/bin/python -m playwright install chromium
-```
-
-**`scripts/wf_refresh.py`** — Whole Foods price + macro fetcher. WF
-serves price/nutrition in the page's `__NEXT_DATA__.aapiData`, pinned
-to the store in the `wfm_store_d8` cookie (San Mateo); the path is
-bot-protected so it drives headless Chromium via Playwright.
-
-> **Rule: never use sale prices.** When pulling any price (this script,
-> a manual page read, an Amazon listing — anything) the seed
+> **Rule: never use sale prices.** When pulling any price (a fetch
+> script, a manual page read, an Amazon listing — anything) the seed
 > `totalCost` must be the **regular** price. WF exposes both: regular
 > = `offerDetails.price.basisPriceAmount` when on sale, else
-> `priceAmount`. The script already enforces this; if you ever read a
-> page by hand, ignore the displayed sale/"current" price and use the
-> crossed-out / "regular" figure.
+> `priceAmount`. If you ever read a page by hand, ignore the displayed
+> sale/"current" price and use the crossed-out / "regular" figure.
+
+**Local `scripts/*.py`** remain ONLY for one-off lookups:
 
 ```
-# look up ONE (or a few) products directly — ignores the seed and the
-# cached JSON; prints parsed price+nutrition JSON to stdout, progress
-# to stderr (pipeable). Use this when given a single URL.
+# look up ONE (or a few) products directly; prints parsed
+# price+nutrition JSON to stdout, progress to stderr (pipeable)
 scripts/.venv/bin/python scripts/wf_refresh.py --url "<wf-product-url>" ["<url2>" ...]
-
-scripts/.venv/bin/python scripts/wf_refresh.py                  # dry run, all seed WF URLs -> scripts/wf_refresh_out.json
-scripts/.venv/bin/python scripts/wf_refresh.py --apply prices    # write refreshed totalCost back (writes .bak)
 ```
 
-Not every product exposes WF data (third-party/marketplace items
-return no price/nutrition) — but the WF product **title** usually
-states the container count. For non-WF supplements, read the Amazon
-listing (WebFetch, or the headless browser if WebFetch 500s) for the
-capsule count.
-
-**`scripts/fix_total_grams.py`** — fills `totalGrams` for priced
-items that have **none** (`totalGrams == 0`; it intentionally skips
-`> 0`, so a bogus `totalGrams: 1` is NOT auto-fixed — correct those
-by hand). Uses the captured `scripts/wf_refresh_out.json`.
-`--apply` to write (`.grams.bak`).
-
-**`scripts/fix_food_units.py`** — propagates each Food's canonical
-member `consumptionUnit`/`consumptionGrams` to every brand variant.
-`--apply` to write (`.units.bak`).
+Their seed-`--apply` modes intentionally hard-error with "seed data
+moved to ../nutrition-config" — do not try to restore them.

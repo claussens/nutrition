@@ -130,7 +130,7 @@ class AdjustmentMgr: ObservableObject {
 
     func update(_ adjustment: Adjustment) {
         if let index = adjustments.firstIndex(where: { $0.id == adjustment.id }) {
-            adjustments[index] = adjustment.update(adjustment: adjustment)
+            adjustments[index] = adjustment
         }
     }
 
@@ -235,10 +235,5 @@ struct Adjustment: Codable, Identifiable {
 
     func toggleActive() -> Adjustment {
         return Adjustment(id: id, name: name, amount: amount, group: group, constraints: constraints, maximum: maximum, active: !active)
-    }
-
-
-    func update(adjustment: Adjustment) -> Adjustment {
-        return Adjustment(id: adjustment.id, name: adjustment.name, amount: adjustment.amount, group: adjustment.group, constraints: adjustment.constraints, maximum: adjustment.maximum, active: adjustment.active)
     }
 }

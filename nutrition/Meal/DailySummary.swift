@@ -143,7 +143,8 @@ struct DailySummary: View {
             activeEnergy: profile.activeCaloriesBurned
         )
 
-        dayLogMgr.logToday(entries: entries,
+        dayLogMgr.logToday(profileId: profileMgr.profile.id,
+                           entries: entries,
                            totals: totals,
                            vitamins: vitamins,
                            body: body)

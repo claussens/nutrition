@@ -8,9 +8,14 @@ import Charts
 struct HistoryView: View {
 
     @EnvironmentObject var dayLogMgr: DayLogMgr
+    @EnvironmentObject var profileMgr: ProfileMgr
 
+    // Only the active profile's days — charts, trends, and the
+    // list all derive from this filtered set.
     private var sortedLogs: [DayLog] {
-        dayLogMgr.logs.sorted { $0.date > $1.date }
+        dayLogMgr.logs
+          .filter { $0.profileId == profileMgr.activeProfileId }
+          .sorted { $0.date > $1.date }
     }
 
     private func dateLabel(_ date: Date) -> String {

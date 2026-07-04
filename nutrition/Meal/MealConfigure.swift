@@ -70,14 +70,3 @@ struct MealConfigure: View {
         }
     }
 }
-
-//struct PrepView_Previews: PreviewProvider {
-//
-//    @StateObject static var profileMgr: ProfileMgr = ProfileMgr()
-//
-//    static var previews: some View {
-//        NavigationView {
-//            Daily(profile: profileMgr.profile!)
-//        }
-//    }
-//}

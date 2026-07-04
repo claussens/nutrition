@@ -31,6 +31,7 @@ struct VerifyAllWalkthrough: View {
     @State private var changes: [ScanDiff.Change] = []
     @State private var selected: Set<String> = []
     @State private var brandText: String = ""
+    @State private var verifyTask: Task<Void, Never>? = nil
 
 
     private var currentName: String? {
@@ -51,7 +52,10 @@ struct VerifyAllWalkthrough: View {
           .navigationBarTitleDisplayMode(.inline)
           .toolbar {
               ToolbarItem(placement: .navigation) {
-                  Button("Stop") { presentationMode.wrappedValue.dismiss() }
+                  Button("Stop") {
+                      verifyTask?.cancel()
+                      presentationMode.wrappedValue.dismiss()
+                  }
                     .foregroundColor(Color.theme.blueYellow)
               }
           }
@@ -61,6 +65,9 @@ struct VerifyAllWalkthrough: View {
                   startCurrent()
               }
           }
+          // Stopping early must not keep billing the API or mutate
+          // state after the walkthrough goes away.
+          .onDisappear { verifyTask?.cancel() }
     }
 
 
@@ -203,7 +210,12 @@ struct VerifyAllWalkthrough: View {
             return
         }
         phase = .searching
-        Task {
+        verifyTask?.cancel()
+        // Capture the position this lookup was started for, so a
+        // stale response can never mutate the next item's review
+        // state after the user has already moved on.
+        let expectedIndex = index
+        verifyTask = Task {
             do {
                 let p = try await NutritionScannerService.verifyByName(ing)
                 let d = ScanDiff.compute(existing: ing, parsed: p)
@@ -211,6 +223,7 @@ struct VerifyAllWalkthrough: View {
                 // from the toggle list to avoid double-handling.
                 let rows = d.changes.filter { $0.id != "brand" }
                 await MainActor.run {
+                    guard index == expectedIndex else { return }
                     parsed = p
                     changes = rows
                     // Leave price and low-confidence fields unchecked so
@@ -224,7 +237,13 @@ struct VerifyAllWalkthrough: View {
                     phase = .review
                 }
             } catch {
+                // A cancelled lookup (Stop button, view dismissed) is
+                // not an error — return without switching to .error.
+                if error is CancellationError || Task.isCancelled {
+                    return
+                }
                 await MainActor.run {
+                    guard index == expectedIndex else { return }
                     phase = .error((error as? NutritionScannerError)?.errorDescription
                                      ?? error.localizedDescription)
                 }

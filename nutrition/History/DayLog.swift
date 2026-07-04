@@ -7,15 +7,48 @@ import Foundation
 // tapped. Purely additive history — nothing here feeds back into
 // the live meal/cost/macro engine.
 //
-// `id` is the calendar-day key ("yyyy-MM-dd") so upserts replace
-// an existing same-day log instead of duplicating it.
+// `id` is "<profileId>|<yyyy-MM-dd>" so upserts replace an
+// existing same-profile same-day log instead of duplicating it,
+// and two profiles logging the same day never collide.
 struct DayLog: Codable, Identifiable {
     var id: String
+    var profileId: String
     var date: Date
     var entries: [DayLogEntry]
     var totals: DayLogTotals
     var vitamins: [DayLogVM]
     var body: DayLogBody
+
+    init(id: String,
+         profileId: String,
+         date: Date,
+         entries: [DayLogEntry],
+         totals: DayLogTotals,
+         vitamins: [DayLogVM],
+         body: DayLogBody) {
+        self.id = id
+        self.profileId = profileId
+        self.date = date
+        self.entries = entries
+        self.totals = totals
+        self.vitamins = vitamins
+        self.body = body
+    }
+
+    // Custom decode: pre-multi-profile daylog.json files lack
+    // `profileId`. Decode it as "" (meaning "pre-multi-profile
+    // entry, stamped by DayLogMgr migration"); encoding stays
+    // synthesized.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.profileId = try c.decodeIfPresent(String.self, forKey: .profileId) ?? ""
+        self.date = try c.decode(Date.self, forKey: .date)
+        self.entries = try c.decode([DayLogEntry].self, forKey: .entries)
+        self.totals = try c.decode(DayLogTotals.self, forKey: .totals)
+        self.vitamins = try c.decode([DayLogVM].self, forKey: .vitamins)
+        self.body = try c.decode(DayLogBody.self, forKey: .body)
+    }
 }
 
 

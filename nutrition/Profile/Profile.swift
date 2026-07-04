@@ -260,13 +260,6 @@ class ProfileMgr: ObservableObject {
     }
 
 
-    // TODO: Update once the health kit active calories algorithm is demystified
-    // func setActiveCaloriesBurned(activeCaloriesBurned: Double) {
-    //     self.profile = profile.setActiveCaloriesBurned(activeCaloriesBurned: activeCaloriesBurned)
-    //     serialize()
-    // }
-
-
     // Force a persist now. With the single-source-of-truth model, every
     // edit to `profile` already wrote into `profiles` (which writes JSON
     // via its didSet) and `activeProfileId` already persisted via its
@@ -441,14 +434,6 @@ struct Profile: Codable, Identifiable, Equatable {
         p.bodyFatPercentage = bodyFatPercentage
         return p
     }
-
-
-    // TODO: Update once the health kit active calories algorithm is demystified
-    // func setActiveCaloriesBurned(activeCaloriesBurned: Double) -> Profile {
-    //     var p = self
-    //     p.activeCaloriesBurned = activeCaloriesBurned
-    //     return p
-    // }
 
 
     // ---------------------------------------------------------------

@@ -192,7 +192,9 @@ struct ScanDiff: Equatable {
 
     private static func formatNumber(_ value: Double) -> String {
         if value == value.rounded() {
-            return String(Int(value))
+            // String(format:) rather than String(Int(value)) — Int()
+            // traps on huge or non-finite doubles from config data.
+            return String(format: "%.0f", value)
         }
         // Trim trailing zeros for readability ("1.5" not "1.50000")
         let s = String(format: "%.4f", value)

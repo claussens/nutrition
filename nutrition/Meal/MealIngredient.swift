@@ -348,7 +348,7 @@ class MealIngredientMgr: ObservableObject {
 
     func update(_ mealIngredient: MealIngredient) {
         if let index = mealIngredients.firstIndex(where: { $0.id == mealIngredient.id }) {
-            mealIngredients[index] = mealIngredient.update(mealIngredient: mealIngredient)
+            mealIngredients[index] = mealIngredient
         }
     }
 
@@ -642,11 +642,6 @@ struct MealIngredient: Codable, Identifiable {
         c.adjustment = Constants.Default
         c.priorState = Constants.Default
         return c
-    }
-
-
-    func update(mealIngredient: MealIngredient) -> MealIngredient {
-        return mealIngredient
     }
 }
 

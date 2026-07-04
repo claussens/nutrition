@@ -30,6 +30,7 @@ struct LabelCaptureSheet: View {
     @State private var showLibrary = false
     @State private var isAnalyzing = false
     @State private var errorMessage: String?
+    @State private var analyzeTask: Task<Void, Never>? = nil
 
     private var apiKeyConfigured: Bool {
         let key = KeychainStore.anthropicKey()
@@ -67,10 +68,10 @@ struct LabelCaptureSheet: View {
               .toolbar {
                   ToolbarItem(placement: .navigation) {
                       Button("Cancel") {
+                          analyzeTask?.cancel()
                           presentationMode.wrappedValue.dismiss()
                       }
                         .foregroundColor(Color.theme.blueYellow)
-                        .disabled(isAnalyzing)
                   }
               }
               .sheet(isPresented: $showCamera) {
@@ -84,6 +85,11 @@ struct LabelCaptureSheet: View {
                   }
               }
         }
+          // An abandoned scan must not keep billing the API or
+          // mutate state after dismissal — block swipe-to-dismiss
+          // while analyzing and cancel the task if we do go away.
+          .interactiveDismissDisabled(isAnalyzing)
+          .onDisappear { analyzeTask?.cancel() }
     }
 
 
@@ -218,7 +224,8 @@ struct LabelCaptureSheet: View {
         let names = ingredientMgr.getAll().map { $0.name }
         let allIngredients = ingredientMgr.getAll()
 
-        Task {
+        analyzeTask?.cancel()
+        analyzeTask = Task {
             do {
                 let parsed = try await NutritionScannerService.analyze(
                     images: snapshotImages,
@@ -239,6 +246,12 @@ struct LabelCaptureSheet: View {
                     }
                 }
             } catch {
+                // A cancelled scan (Cancel button, sheet dismissed) is
+                // not an error — reset the spinner and stay quiet.
+                if error is CancellationError || Task.isCancelled {
+                    await MainActor.run { isAnalyzing = false }
+                    return
+                }
                 await MainActor.run {
                     isAnalyzing = false
                     if let scannerErr = error as? NutritionScannerError {

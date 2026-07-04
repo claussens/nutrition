@@ -57,13 +57,3 @@ struct Tabs: View {
           .accentColor(Color.theme.blueYellow)
     }
 }
-
-// struct ContentView_Previews: PreviewProvider {
-//     @StateObject static var ingredientMgr: IngredientMgr = IngredientMgr()
-//     @StateObject static var profileMgr: ProfileMgr = ProfileMgr()
-
-//     static var previews: some View {
-//         Tabs(profile: profileMgr.profile!)
-//             .environmentObject(ingredientMgr)
-//     }
-// }

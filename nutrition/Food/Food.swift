@@ -139,8 +139,8 @@ class FoodMgr: ObservableObject {
 
     // `name` is a Food name (meal rows / adjustments target a Food).
     // Resolve via the Food's current member; never force-unwraps (the
-    // bare canonical ingredients are gone). Shared by AdjustmentAdd,
-    // AdjustmentEdit, and MealAdd, which previously copy-pasted this.
+    // bare canonical ingredients are gone). Shared by AdjustmentAdd
+    // and AdjustmentEdit, which previously copy-pasted this.
     func consumptionUnit(for name: String, ingredientMgr: IngredientMgr) -> Unit {
         if let f = getByName(name: name),
            let ing = ingredientMgr.getByName(name: f.currentIngredientName) {

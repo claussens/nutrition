@@ -10,7 +10,7 @@ import SwiftUI
 // toolbar buttons tinted with Color.theme.blueYellow.
 //
 // We deliberately store the GitHub PAT under a distinct Keychain
-// account ("githubToken") so it lives alongside — not on top of —
+// account ("github-pat") so it lives alongside — not on top of —
 // the Anthropic key.
 // ============================================================
 struct TokenConfigSheet: View {
@@ -23,6 +23,10 @@ struct TokenConfigSheet: View {
     // a masked "currently set" hint without echoing the secret back
     // into the editable field unmasked beyond what the user types.
     @State private var savedToken: String = ""
+
+    // Set when the Keychain write fails so the user isn't silently
+    // left with a stale (or missing) token.
+    @State private var saveError: String? = nil
 
 
     var body: some View {
@@ -41,6 +45,12 @@ struct TokenConfigSheet: View {
                         } label: {
                             Label("Clear token", systemImage: "trash")
                         }
+                    }
+
+                    if let saveError {
+                        Text(saveError)
+                          .font(.footnote)
+                          .foregroundColor(Color.theme.red)
                     }
                 }
 
@@ -72,7 +82,7 @@ struct TokenConfigSheet: View {
                   }
               }
               .onAppear {
-                  let existing = ConfigKeychain.githubToken() ?? ""
+                  let existing = KeychainStore.githubToken() ?? ""
                   token = existing
                   savedToken = existing
               }
@@ -81,7 +91,11 @@ struct TokenConfigSheet: View {
 
 
     private func save() {
-        ConfigKeychain.setGitHubToken(token)
+        guard KeychainStore.setGitHubToken(token) else {
+            saveError = "Couldn't save to the Keychain — try again."
+            return
+        }
+        saveError = nil
         presentationMode.wrappedValue.dismiss()
     }
 

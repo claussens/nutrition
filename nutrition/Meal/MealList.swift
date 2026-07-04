@@ -703,12 +703,6 @@ struct MealList: View {
             }
 
             _ = sample.quantity.doubleValue(for: HKUnit.kilocalorie())
-
-            // TODO: Update once the health kit active calories algorithm is demystified
-            // if activeCaloriesBurned != profileMgr.profile.activeCaloriesBurned {
-            //     print("Updating active energy burned...")
-            //     profileMgr.setActiveEnergyBurned(activeCaloriesBurned: activeCaloriesBurned)
-            // }
         }
     }
 
@@ -1093,15 +1087,6 @@ struct MealRowView<NameLabel: View>: View {
           .frame(height: 26.6)
     }
 }
-
-//struct MealIngredientList_Previews: PreviewProvider {
-//    static var previews: some View {
-//        NavigationView {
-//            MealIngredientList()
-//              .environmentObject(MealIngredientMgr())
-//        }
-//    }
-//}
 
 
 // ============================================================

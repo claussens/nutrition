@@ -33,7 +33,7 @@ struct HamburgerMenu<Extra: View>: View {
     // A GitHub token must be configured before Refresh can run. Read
     // live each time the menu opens (body re-evaluates), and again
     // after the token sheet dismisses.
-    private var hasToken: Bool { !(ConfigKeychain.githubToken() ?? "").isEmpty }
+    private var hasToken: Bool { !(KeychainStore.githubToken() ?? "").isEmpty }
 
 
     var body: some View {

@@ -81,9 +81,3 @@ struct IngredientRow: View {
         }
     }
 }
-
-//    struct IngredientRow_Previews: PreviewProvider {
-//        static var previews: some View {
-//            IngredientRow()
-//        }
-//    }

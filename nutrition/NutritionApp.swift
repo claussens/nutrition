@@ -50,7 +50,7 @@ struct app: App {
         _macrosMgr         = StateObject(wrappedValue: MacrosMgr())
         _vitaminMineralMgr = StateObject(wrappedValue: VitaminMineralMgr())
         _foodMgr           = StateObject(wrappedValue: FoodMgr())
-        _dayLogMgr         = StateObject(wrappedValue: DayLogMgr())
+        _dayLogMgr         = StateObject(wrappedValue: DayLogMgr(activeProfileId: active.id))
     }
 
 

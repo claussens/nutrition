@@ -23,6 +23,10 @@ struct SettingsView: View {
     @State private var isTesting = false
     @State private var testResult: TestResult? = nil
 
+    // Set when the Keychain write fails so the user isn't silently
+    // left with a stale (or missing) key.
+    @State private var saveError: String? = nil
+
 
     enum TestResult: Equatable {
         case success
@@ -43,6 +47,11 @@ struct SettingsView: View {
                     } label: {
                         Label("Clear key", systemImage: "trash")
                     }
+                }
+                if let saveError {
+                    Text(saveError)
+                      .font(.footnote)
+                      .foregroundColor(.red)
                 }
             }
 
@@ -105,7 +114,11 @@ struct SettingsView: View {
 
 
     private func save() {
-        KeychainStore.setAnthropicKey(apiKey)
+        guard KeychainStore.setAnthropicKey(apiKey) else {
+            saveError = "Couldn't save to the Keychain — try again."
+            return
+        }
+        saveError = nil
         NutritionScannerService.selectedModel = model
         presentationMode.wrappedValue.dismiss()
     }

@@ -227,16 +227,6 @@ struct ProfileEdit: View {
     }
 }
 
-//struct ProfileEdit_Previews: PreviewProvider {
-//    @StateObject static var profileMgr: ProfileMgr = ProfileMgr()
-//
-//    static var previews: some View {
-//        NavigationView {
-//            ProfileEdit(profile: profileMgr.profile!)
-//        }
-//    }
-//}
-
 
 // =============================================================
 // ProfileMetricDetail — chevron-driven inline documentation for

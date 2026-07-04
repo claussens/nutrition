@@ -127,11 +127,24 @@ enum ParsedMatch: Codable, Equatable {
         case "new":
             self = .new
         case "update":
-            let name = try c.decode(String.self, forKey: .name)
-            self = .update(name: name)
+            // The tool schema only requires `kind`, so `name` can be
+            // missing. Losing the match target is recoverable as a
+            // new-ingredient flow; throwing would lose the whole scan.
+            let name = try c.decodeIfPresent(String.self, forKey: .name)
+            if let name = name, !name.isEmpty {
+                self = .update(name: name)
+            } else {
+                self = .new
+            }
         case "ambiguous":
-            let candidates = try c.decode([String].self, forKey: .candidates)
-            self = .ambiguous(candidates: candidates)
+            // Same recovery: no candidates to choose from means the
+            // scan can only proceed as a new ingredient.
+            let candidates = try c.decodeIfPresent([String].self, forKey: .candidates)
+            if let candidates = candidates, !candidates.isEmpty {
+                self = .ambiguous(candidates: candidates)
+            } else {
+                self = .new
+            }
         default:
             // Unknown kinds default to .new — safer than throwing,
             // since a parse error here would lose the whole scan.
