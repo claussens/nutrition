@@ -140,3 +140,57 @@ enum KeychainStore {
         return true
     }
 }
+
+// MARK: - Dev launch (DEBUG only)
+
+#if DEBUG
+/// STANDARD dev launch helpers shared across the sibling iOS apps. Lets a sim run
+/// pass secrets and toggles WITHOUT the Settings screen — compiled out of Release.
+///
+///   • `--gh-token <t>`      GitHub PAT     (else env `GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_API_KEY`)
+///   • `--anthropic-key <k>` Anthropic key  (else env `ANTHROPIC_API_KEY`)
+///   • `--debug`             verbose dev logging of resolved sources
+///   • `-c` / `--config-dir` local config dir (see `LocalConfigSource`)
+///
+/// `scripts/sim.sh` forwards `--gh-token`/`--anthropic-key` (or the env vars) to
+/// the app both as launch args AND as `SIMCTL_CHILD_*` env vars, so either
+/// channel works. `seedCredentials()` writes any supplied secret into the
+/// Keychain so every existing code path (GitHub config sync, the Anthropic label
+/// scanner) picks it up. `GITHUB_API_KEY` is accepted as a GitHub env alias to
+/// align with the launch auto-refresh gate in `NutritionApp`.
+enum DevLaunch {
+    /// `--debug` present → verbose dev logging.
+    static var verbose: Bool { CommandLine.arguments.contains("--debug") }
+
+    private static func argValue(_ names: [String]) -> String? {
+        let a = CommandLine.arguments
+        for n in names where a.contains(n) {
+            if let i = a.firstIndex(of: n), i + 1 < a.count, !a[i + 1].isEmpty { return a[i + 1] }
+        }
+        return nil
+    }
+
+    /// Seed GitHub + Anthropic secrets from launch args, then env vars (args
+    /// win), into the Keychain. No-op when nothing is supplied. Call once at launch.
+    static func seedCredentials() {
+        let env = ProcessInfo.processInfo.environment
+        if let gh = argValue(["--gh-token", "--github-token"]) {
+            KeychainStore.setGitHubToken(gh)
+            if verbose { print("Nutrition: seeded GitHub token from launch arg") }
+        } else if let gh = env["GITHUB_TOKEN"] ?? env["GH_TOKEN"] ?? env["GITHUB_API_KEY"], !gh.isEmpty {
+            KeychainStore.setGitHubToken(gh)
+            if verbose { print("Nutrition: seeded GitHub token from env") }
+        }
+        if let ant = argValue(["--anthropic-key", "--ant-key"]) {
+            KeychainStore.setAnthropicKey(ant)
+            if verbose { print("Nutrition: seeded Anthropic key from launch arg") }
+        } else if let ant = env["ANTHROPIC_API_KEY"], !ant.isEmpty {
+            KeychainStore.setAnthropicKey(ant)
+            if verbose { print("Nutrition: seeded Anthropic key from env") }
+        }
+        if verbose {
+            print("Nutrition: --debug on · config-dir=\(LocalConfigSource.directory ?? "none") · gh=\(KeychainStore.githubToken() != nil) · anthropic=\(KeychainStore.anthropicKey() != nil)")
+        }
+    }
+}
+#endif

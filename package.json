@@ -1,0 +1,18 @@
+{
+  "name": "nutrition",
+  "version": "1.0.0",
+  "description": "Nutrition — iOS nutrition app",
+  "scripts": {
+    "build": "scripts/sim.sh build",
+    "sim": "scripts/sim.sh run",
+    "sim:boot": "scripts/sim.sh boot",
+    "sim:shot": "scripts/sim.sh shot",
+    "sim:local": "scripts/sim.sh run -c ../nutrition-config",
+    "sim:debug": "scripts/sim.sh run --debug -c ../nutrition-config"
+  },
+  "author": "Shane",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

@@ -68,6 +68,12 @@ struct app: App {
               .environmentObject(dayLogMgr)
               .task {
                   #if DEBUG
+                  // Honor `--gh-token` / `--anthropic-key` (or the GITHUB_TOKEN /
+                  // GH_TOKEN / GITHUB_API_KEY / ANTHROPIC_API_KEY env vars) +
+                  // `--debug` for sim runs — seed the Keychain BEFORE any code path
+                  // (config sync, label scanner) reads a credential.
+                  DevLaunch.seedCredentials()
+
                   // Test harness: when launched with a GITHUB_API_KEY in the
                   // environment, fetch the live config from the repo on startup
                   // so the Simulator can verify the network load path without a

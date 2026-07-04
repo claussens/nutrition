@@ -65,6 +65,16 @@ final class ConfigStore: ObservableObject {
     /// seed. Never throws — if even the bundled seed fails, `data` is left nil
     /// and the problem is logged, so the orchestrator can decide how to surface it.
     func loadInitial() {
+        #if DEBUG
+        // Dev: `-c` / `--config-dir <dir>` reads the nutrition-config checkout
+        // straight from disk, bypassing the Documents cache and the bundled seed
+        // (and, via ConfigSync.refresh, the GitHub refresh). See LocalConfigSource.
+        // Compiled out of Release, so the normal path below is untouched when absent.
+        if LocalConfigSource.isActive {
+            loadFromLocalConfig()
+            return
+        }
+        #endif
         do {
             let parsed = try parse(loadSectionTexts())
             let violations = ConfigSync.validate(parsed)
@@ -91,6 +101,42 @@ final class ConfigStore: ObservableObject {
             }
         }
     }
+
+    #if DEBUG
+    /// Dev-only launch load for `-c` / `--config-dir <dir>`. Reads each config section
+    /// straight from the checkout (falling back to the bundled seed only for a
+    /// section the checkout happens to be missing), then runs the SAME parse +
+    /// referential validation as the cache/GitHub paths. A broken local edit is
+    /// surfaced via a log line rather than being silently masked by the bundled
+    /// seed — that's the whole point of the mode. Never throws: on hard failure
+    /// `data` is left as-is and the problem is logged.
+    private func loadFromLocalConfig() {
+        guard let dir = LocalConfigSource.directory else { return }
+        let base = URL(fileURLWithPath: dir, isDirectory: true)
+        do {
+            var texts: [String: String] = [:]
+            for name in File.all {
+                let local = base.appendingPathComponent(name)
+                if FileManager.default.fileExists(atPath: local.path) {
+                    texts[name] = try String(contentsOf: local, encoding: .utf8)
+                } else if let bundled = bundledURL(for: name) {
+                    texts[name] = try String(contentsOf: bundled, encoding: .utf8)
+                } else {
+                    throw ConfigStoreError.missingResource(name)
+                }
+            }
+            let parsed = try parse(texts)
+            let violations = ConfigSync.validate(parsed)
+            if !violations.isEmpty {
+                print("ConfigStore: --config-dir \(dir) has \(violations.count) validation issue(s): \(violations)")
+            }
+            data = parsed
+            print("ConfigStore: --config-dir \(dir) → loaded from disk (GitHub refresh disabled)")
+        } catch {
+            print("ConfigStore: --config-dir \(dir) load FAILED: \(error)")
+        }
+    }
+    #endif
 
     /// Read each section's YAML text, preferring the Documents cache and falling
     /// back per-file to the bundled copy. Throws if a section can't be found in
@@ -465,3 +511,40 @@ fileprivate extension ConfigStore {
         }
     }
 }
+
+// ----------------------------------------------------------------------------
+// LocalConfigSource — dev-only local config source (DEBUG only)
+// ----------------------------------------------------------------------------
+//
+// The `-c` / `--config-dir <dir>` launch arg (STANDARD across the sibling apps)
+// loads every config section (food / ingredients / meals / supplements / rda)
+// straight from a local `nutrition-config` checkout INSTEAD of GitHub — and
+// disables the GitHub refresh entirely (early-return in ConfigSync.refresh;
+// local-load branch in ConfigStore.loadInitial). Edit the YAML in the repo,
+// relaunch, and the change shows — no commit, no push, no token, no network.
+// Pass an ABSOLUTE path (the simulator can't resolve a relative one);
+// `scripts/sim.sh` absolutizes it for you.
+//
+//   scripts/sim.sh run -c ../nutrition-config      # or: npm run sim:local
+//
+// Opt-in via the launch arg and compiled out of Release, so the normal
+// GitHub-backed path is byte-for-byte untouched when the flag is absent.
+
+#if DEBUG
+enum LocalConfigSource {
+    /// The directory passed to `-c <dir>` / `--config-dir <dir>`, or nil when
+    /// the flag is absent.
+    static var directory: String? {
+        let args = CommandLine.arguments
+        for flag in ["-c", "--config-dir"] {
+            if let i = args.firstIndex(of: flag), i + 1 < args.count, !args[i + 1].isEmpty {
+                return args[i + 1]
+            }
+        }
+        return nil
+    }
+
+    /// True when the app was launched in local-config mode.
+    static var isActive: Bool { directory != nil }
+}
+#endif

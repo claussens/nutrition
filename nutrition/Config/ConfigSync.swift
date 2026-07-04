@@ -97,6 +97,15 @@ enum ConfigSync {
     ///   parse, validation, HTTP).
     /// - Returns: `.applied` when data changed, `.upToDate` when it didn't.
     static func refresh() async throws -> Result {
+        #if DEBUG
+        // Local dev mode (`-c` / `--config-dir <dir>`) owns the config set: it's loaded
+        // straight from the on-disk checkout at launch (ConfigStore.loadInitial).
+        // Short-circuit EVERY refresh entry point — the launch auto-refresh and
+        // the manual Refresh tap both flow through here — so GitHub never
+        // overwrites the local set. Compiled out of Release.
+        if LocalConfigSource.isActive { return .upToDate }
+        #endif
+
         // 1. Credential — read the PAT from the Keychain.
         guard let token = KeychainStore.githubToken(), !token.isEmpty else {
             throw ConfigSyncError.missingToken
