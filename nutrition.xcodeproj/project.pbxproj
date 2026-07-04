@@ -79,7 +79,24 @@
 		FF0200000000000000000022 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0100000000000000000012 /* KeychainStore.swift */; };
 		FF0200000000000000000023 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0100000000000000000013 /* SettingsView.swift */; };
 		FF0200000000000000000024 /* VerifyAllWalkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0100000000000000000014 /* VerifyAllWalkthrough.swift */; };
+		FE0200000000000000000009 /* MealPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0100000000000000000009 /* MealPlanner.swift */; };
+		AA0200000000000000000001 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000001 /* TestSupport.swift */; };
+		AA0200000000000000000002 /* MealPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000002 /* MealPlannerTests.swift */; };
+		AA0200000000000000000003 /* MealResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000003 /* MealResolverTests.swift */; };
+		AA0200000000000000000004 /* ProfileMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000004 /* ProfileMetricsTests.swift */; };
+		AA0200000000000000000005 /* VitaminMineralRDATests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000005 /* VitaminMineralRDATests.swift */; };
+		AA0200000000000000000006 /* CostMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000006 /* CostMathTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA0900000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 349EE52527C99AC30072255A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 349EE52C27C99AC30072255A;
+			remoteInfo = nutrition;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		00C9F20852F9174B4F2F0A2B /* TokenConfigSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TokenConfigSheet.swift; path = ../../Config/TokenConfigSheet.swift; sourceTree = "<group>"; };
@@ -155,6 +172,14 @@
 		FF0100000000000000000012 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		FF0100000000000000000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		FF0100000000000000000014 /* VerifyAllWalkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifyAllWalkthrough.swift; sourceTree = "<group>"; };
+		FE0100000000000000000009 /* MealPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanner.swift; sourceTree = "<group>"; };
+		AA0100000000000000000001 /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
+		AA0100000000000000000002 /* MealPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlannerTests.swift; sourceTree = "<group>"; };
+		AA0100000000000000000003 /* MealResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealResolverTests.swift; sourceTree = "<group>"; };
+		AA0100000000000000000004 /* ProfileMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileMetricsTests.swift; sourceTree = "<group>"; };
+		AA0100000000000000000005 /* VitaminMineralRDATests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitaminMineralRDATests.swift; sourceTree = "<group>"; };
+		AA0100000000000000000006 /* CostMathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostMathTests.swift; sourceTree = "<group>"; };
+		AA0400000000000000000001 /* nutritionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = nutritionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -164,6 +189,13 @@
 			files = (
 				3402286C27D7C7C800741FBB /* HealthKit.framework in Frameworks */,
 				F0E32724D41C5596C4F42528 /* Yams in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0800000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -205,6 +237,7 @@
 			isa = PBXGroup;
 			children = (
 				349EE52F27C99AC30072255A /* nutrition */,
+				AA0500000000000000000001 /* nutritionTests */,
 				349EE52E27C99AC30072255A /* Products */,
 				3402286A27D7C7C800741FBB /* Frameworks */,
 			);
@@ -214,8 +247,22 @@
 			isa = PBXGroup;
 			children = (
 				349EE52D27C99AC30072255A /* Nutrition.app */,
+				AA0400000000000000000001 /* nutritionTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		AA0500000000000000000001 /* nutritionTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA0100000000000000000001 /* TestSupport.swift */,
+				AA0100000000000000000002 /* MealPlannerTests.swift */,
+				AA0100000000000000000003 /* MealResolverTests.swift */,
+				AA0100000000000000000004 /* ProfileMetricsTests.swift */,
+				AA0100000000000000000005 /* VitaminMineralRDATests.swift */,
+				AA0100000000000000000006 /* CostMathTests.swift */,
+			);
+			path = nutritionTests;
 			sourceTree = "<group>";
 		};
 		349EE52F27C99AC30072255A /* nutrition */ = {
@@ -270,6 +317,7 @@
 			isa = PBXGroup;
 			children = (
 				344D200527CE299D00343108 /* MealList.swift */,
+				FE0100000000000000000009 /* MealPlanner.swift */,
 				344D200127CDC53700343108 /* MealConfigure.swift */,
 				344D200727CE2B4E00343108 /* MealAdd.swift */,
 				342F816827D42D1600B16B9E /* MealIngredient.swift */,
@@ -410,6 +458,24 @@
 			productReference = 349EE52D27C99AC30072255A /* Nutrition.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AA0600000000000000000001 /* nutritionTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0700000000000000000001 /* Build configuration list for PBXNativeTarget "nutritionTests" */;
+			buildPhases = (
+				AA0800000000000000000001 /* Sources */,
+				AA0800000000000000000002 /* Frameworks */,
+				AA0800000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA0900000000000000000001 /* PBXTargetDependency */,
+			);
+			name = nutritionTests;
+			productName = nutritionTests;
+			productReference = AA0400000000000000000001 /* nutritionTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -422,6 +488,10 @@
 				TargetAttributes = {
 					349EE52C27C99AC30072255A = {
 						CreatedOnToolsVersion = 13.2.1;
+					};
+					AA0600000000000000000001 = {
+						CreatedOnToolsVersion = 13.2.1;
+						TestTargetID = 349EE52C27C99AC30072255A;
 					};
 				};
 			};
@@ -442,6 +512,7 @@
 			projectRoot = "";
 			targets = (
 				349EE52C27C99AC30072255A /* nutrition */,
+				AA0600000000000000000001 /* nutritionTests */,
 			);
 		};
 /* End PBXProject section */
@@ -458,6 +529,13 @@
 				7136F611E79107FDFCCDA73C /* meals.yaml in Resources */,
 				3EB6F1325B383C8552AE5B7C /* rda.yaml in Resources */,
 				162483F0AAB29088B36DF313 /* supplements.yaml in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0800000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -500,6 +578,7 @@
 				349EE57627CBF3600072255A /* NameValue.swift in Sources */,
 				349EE57827CC10E60072255A /* Profile.swift in Sources */,
 				344D200627CE299D00343108 /* MealList.swift in Sources */,
+				FE0200000000000000000009 /* MealPlanner.swift in Sources */,
 				347A335827DAA1FE005E3F33 /* IngredientAdd.swift in Sources */,
 				9EFED2D8597BBE4683EDBFBE /* VitaminMineralActuals.swift in Sources */,
 				C575CA58D52D8B6140F52ACE /* VitaminMineralContributors.swift in Sources */,
@@ -534,7 +613,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0800000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0200000000000000000001 /* TestSupport.swift in Sources */,
+				AA0200000000000000000002 /* MealPlannerTests.swift in Sources */,
+				AA0200000000000000000003 /* MealResolverTests.swift in Sources */,
+				AA0200000000000000000004 /* ProfileMetricsTests.swift in Sources */,
+				AA0200000000000000000005 /* VitaminMineralRDATests.swift in Sources */,
+				AA0200000000000000000006 /* CostMathTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA0900000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 349EE52C27C99AC30072255A /* nutrition */;
+			targetProxy = AA0900000000000000000002 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		349EE53E27C99AC40072255A /* Debug */ = {
@@ -723,6 +823,44 @@
 			};
 			name = Release;
 		};
+		AA0700000000000000000002 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QATUG526J8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sclaussen.nutritionTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Nutrition.app/Nutrition";
+			};
+			name = Debug;
+		};
+		AA0700000000000000000003 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QATUG526J8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sclaussen.nutritionTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Nutrition.app/Nutrition";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -740,6 +878,15 @@
 			buildConfigurations = (
 				349EE54127C99AC40072255A /* Debug */,
 				349EE54227C99AC40072255A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0700000000000000000001 /* Build configuration list for PBXNativeTarget "nutritionTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0700000000000000000002 /* Debug */,
+				AA0700000000000000000003 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
