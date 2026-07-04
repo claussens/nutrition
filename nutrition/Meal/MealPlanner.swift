@@ -8,11 +8,16 @@ import Foundation
 // testable type. MealList keeps thin wrappers so UI call sites
 // are unchanged.
 //
-// Behavior is identical to the former MealList methods; the only
-// changes are dependency injection (the managers arrive via init
-// instead of @EnvironmentObject) and a caller-supplied
-// RandomNumberGenerator so the within-group shuffle in
-// adjustmentOrder() can be made deterministic in tests
+// The generation runs on a LOCAL copy of the meal rows and macro
+// totals and assigns the results back to the managers exactly once
+// at the end. Previously every row mutation went through
+// MealIngredientMgr, whose didSet re-encoded the whole array to
+// UserDefaults — O(rows × mutations) JSON encoding per
+// pull-to-refresh. One assignment = one @Published publish and one
+// serialize.
+//
+// The RandomNumberGenerator is caller-supplied so the within-group
+// shuffle in adjustmentOrder() can be made deterministic in tests
 // (production passes SystemRandomNumberGenerator).
 //
 // `profile` is a value snapshot of the active profile taken at
@@ -34,37 +39,55 @@ struct MealPlanner {
     }
 
 
+    // The generation's working state: the meal rows and the running
+    // macro totals, mutated locally and committed once.
+    private struct GenerationState {
+        var rows: [MealIngredient]
+        var macros: Macros
+    }
+
+
     func generateMeal<R: RandomNumberGenerator>(using rng: inout R) {
 
         // Set (or reset) the daily macro goals:
         // - reflects any changes in the manually updated profile
         // - reflects any changes to the automatically updated profile fields
-        macrosMgr.setDailyMacroGoals(caloriesGoalUnadjusted: profile.caloriesGoalUnadjusted, caloriesGoal: profile.caloriesGoal, fatGoal: profile.fatGoal, fiberMinimum: profile.fiberMinimum, netCarbsMaximum: profile.effectiveNetCarbsMaximum, proteinGoal: profile.proteinGoal)
+        var state = GenerationState(
+            rows: mealIngredientMgr.mealIngredients,
+            macros: Macros().setDailyMacroGoals(caloriesGoalUnadjusted: profile.caloriesGoalUnadjusted, caloriesGoal: profile.caloriesGoal, fatGoal: profile.fatGoal, fiberMinimum: profile.fiberMinimum, netCarbsMaximum: profile.effectiveNetCarbsMaximum, proteinGoal: profile.proteinGoal))
 
         // Undo all the auto adjustments (so we can reapply them
         // with a clean slate).  Removal will result in:
         // 1. Meal ingredients being deleted that were added as a result of apply adjustments
-        // 2. Meal ingredient amounts being set to original values, and deativation
-        mealIngredientMgr.undoAutoAdjustments()
+        // 2. Meal ingredient amounts being set to original values
+        undoAutoAdjustments(&state)
 
         // Initialize the total macros for each meal ingredient and
         // the total macros for all ingredients.  These will all be
-        // updated later in this algorithm.
-        mealIngredientMgr.setMacroActualsToZero()
-        for mealIngredient in mealIngredientMgr.getAllMealIngredients() {
-            setMacroActualsAndUpdateMealMacroActuals(mealIngredient)
+        // updated later in this algorithm. The bulk pass visits
+        // non-supplements first, then supplements (the manager's
+        // getAllMealIngredients order).
+        state.rows = state.rows.map { $0.setMacroActualsToZero() }
+        let bulkOrder = state.rows.filter { !$0.isSupplement } + state.rows.filter { $0.isSupplement }
+        for mealIngredient in bulkOrder {
+            setMacroActualsAndUpdateMealMacroActuals(mealIngredient, state: &state)
         }
 
         // Keep applying adjustment passes until a full pass adds
         // nothing. Once a pass fails, no state has changed, so
         // re-running it cannot succeed — no retry loop needed.
-        while tryAddingAdjustments(using: &rng) { }
+        while tryAddingAdjustments(&state, using: &rng) { }
+
+        // Commit: one @Published publish + one UserDefaults
+        // serialize for the rows, one publish for the macros.
+        mealIngredientMgr.mealIngredients = state.rows
+        macrosMgr.macros = state.macros
     }
 
 
-    func tryAddingAdjustments<R: RandomNumberGenerator>(using rng: inout R) -> Bool {
+    private func tryAddingAdjustments<R: RandomNumberGenerator>(_ state: inout GenerationState, using rng: inout R) -> Bool {
         for adjustment in adjustmentOrder(using: &rng) {
-            if tryAddingAdjustment(adjustment) {
+            if tryAddingAdjustment(adjustment, state: &state) {
                 return true
             }
         }
@@ -134,9 +157,9 @@ struct MealPlanner {
     }
 
 
-    func tryAddingAdjustment(_ adjustment: Adjustment) -> Bool {
+    private func tryAddingAdjustment(_ adjustment: Adjustment, state: inout GenerationState) -> Bool {
 
-        let mealIngredient = mealIngredientMgr.getByName(name: adjustment.name)
+        let mealIngredient = state.rows.first(where: { $0.name == adjustment.name })
 
 
         // Skip Manual / Done — both are explicit user signals to
@@ -152,9 +175,12 @@ struct MealPlanner {
         // If the adjustment has constraints, and the new meal
         // ingredient amount with the adjustment applied would exceed
         // the adjustment's maximum constraint for the meal ingredient
-        // then the adjustment cannot be applied.
-        if mealIngredient != nil && adjustment.constraints {
-            if (mealIngredient!.amount + adjustment.amount) > adjustment.maximum {
+        // then the adjustment cannot be applied. The same cap applies
+        // when the adjustment would CREATE the row (starting amount
+        // 0): an adjustment whose own amount exceeds its maximum
+        // must not sneak a too-big row into the meal.
+        if adjustment.constraints {
+            if ((mealIngredient?.amount ?? 0) + adjustment.amount) > adjustment.maximum {
                 return false
             }
         }
@@ -184,9 +210,9 @@ struct MealPlanner {
         let netCarbs: Double = Double(ingredient.netCarbs * servings)
         let protein: Double = Double(ingredient.protein * servings)
 
-        if macrosMgr.macros.fatGoal < macrosMgr.macros.fat + fat ||
-             macrosMgr.macros.netCarbsMaximum < macrosMgr.macros.netCarbs + netCarbs ||
-             macrosMgr.macros.proteinGoal < macrosMgr.macros.protein + protein {
+        if state.macros.fatGoal < state.macros.fat + fat ||
+             state.macros.netCarbsMaximum < state.macros.netCarbs + netCarbs ||
+             state.macros.proteinGoal < state.macros.protein + protein {
             return false
         }
 
@@ -198,14 +224,14 @@ struct MealPlanner {
         // bookkeeping. automaticAdjustment then bumps the row amount
         // (creating the row if it didn't exist).
         if let mi = mealIngredient {
-            setMacroActualsAndUpdateMealMacroActuals(mi, amountOverride: Double(adjustment.amount))
+            setMacroActualsAndUpdateMealMacroActuals(mi, amountOverride: Double(adjustment.amount), state: &state)
         }
-        mealIngredientMgr.automaticAdjustment(name: adjustment.name, amount: adjustment.amount)
+        automaticAdjustment(name: adjustment.name, amount: adjustment.amount, state: &state)
         // Row was just created by automaticAdjustment (no prior row) —
         // account its delta now that it exists.
         if mealIngredient == nil,
-           let created = mealIngredientMgr.getByName(name: adjustment.name) {
-            setMacroActualsAndUpdateMealMacroActuals(created, amountOverride: Double(adjustment.amount))
+           let created = state.rows.first(where: { $0.name == adjustment.name }) {
+            setMacroActualsAndUpdateMealMacroActuals(created, amountOverride: Double(adjustment.amount), state: &state)
         }
         return true
     }
@@ -217,16 +243,17 @@ struct MealPlanner {
     // for the meal ingredient, and then set those macro values on the
     // meal ingredient.
     //
-    // Next, if the meal ingredient is active, add the meal
-    // ingredient's macros to the cumulative meal's macros.
+    // Next, add the meal ingredient's macros to the cumulative
+    // meal's macros.
     // `amountOverride` lets the auto-adjust engine account for just
     // the DELTA it is applying (adjustment.amount) instead of the
     // row's full amount — preserving the original incremental macro
     // bookkeeping. The bulk pass in generateMeal() passes nil so the
     // row's full amount is used. Resolution (which member ingredient)
     // is row-aware in both cases.
-    func setMacroActualsAndUpdateMealMacroActuals(_ mi: MealIngredient,
-                                                  amountOverride: Double? = nil) {
+    private func setMacroActualsAndUpdateMealMacroActuals(_ mi: MealIngredient,
+                                                          amountOverride: Double? = nil,
+                                                          state: inout GenerationState) {
 
         // Category placeholder — not a real food, contributes ZERO
         // calories/macros and never resolves to an ingredient.
@@ -235,7 +262,6 @@ struct MealPlanner {
         // a placeholder can never crash or skew totals.
         if mi.isFoodTypeSlot { return }
 
-        let name = mi.name
         let amount = amountOverride ?? Double(mi.amount)
 
         // Composite row: macros are the sum of each component's
@@ -252,8 +278,8 @@ struct MealPlanner {
                 nc += ing.netCarbs * servings
                 p  += ing.protein  * servings
             }
-            mealIngredientMgr.setMacroActuals(id: mi.id, calories: c, fat: f, fiber: fi, netcarbs: nc, protein: p)
-            macrosMgr.addMacroActuals(name: name, calories: c, fat: f, fiber: fi, netCarbs: nc, protein: p)
+            setMacroActuals(id: mi.id, calories: c, fat: f, fiber: fi, netcarbs: nc, protein: p, state: &state)
+            state.macros = state.macros.addMacroActuals(calories: c, fat: f, fiber: fi, netCarbs: nc, protein: p)
             return
         }
 
@@ -281,10 +307,60 @@ struct MealPlanner {
         let protein: Double = Double(ingredient.protein * servings)
 
         // Update the macro values on this specific meal row (id-keyed
-        // so duplicated rows of the same Food each get their own).
-        mealIngredientMgr.setMacroActuals(id: mi.id, calories: calories, fat: fat, fiber: fiber, netcarbs: netcarbs, protein: protein)
+        // so duplicated rows of the same Food each get their own),
+        // then add them to the overall meal actuals.
+        setMacroActuals(id: mi.id, calories: calories, fat: fat, fiber: fiber, netcarbs: netcarbs, protein: protein, state: &state)
+        state.macros = state.macros.addMacroActuals(calories: calories, fat: fat, fiber: fiber, netCarbs: netcarbs, protein: protein)
+    }
 
-        // Add the meal ingredient's macro values to the overall meal actuals
-        macrosMgr.addMacroActuals(name: name, calories: calories, fat: fat, fiber: fiber, netCarbs: netcarbs, protein: protein)
+
+    // ------------------------------------------------------------
+    // Local-copy equivalents of the MealIngredientMgr mutations the
+    // engine used to call. Same row-level semantics (the MealIngredient
+    // copy-and-mutate methods are shared); they just target the
+    // working array instead of the published one.
+    // ------------------------------------------------------------
+
+    private func undoAutoAdjustments(_ state: inout GenerationState) {
+
+        // Go through each meal ingredient that was auto adjusted
+        for mealIngredient in state.rows.filter({ $0.adjustment == Constants.Automatic }) {
+
+            // A row the engine itself created (priorState Ingredient)
+            // is deleted to reverse the adjustment; a pre-existing row
+            // gets its amount restored to originalAmount.
+            if mealIngredient.priorState == Constants.Ingredient {
+                state.rows.removeAll { $0.id == mealIngredient.id }
+                continue
+            }
+
+            if let index = state.rows.firstIndex(where: { $0.id == mealIngredient.id }) {
+                state.rows[index] = state.rows[index].undoAdjustment()
+            }
+        }
+    }
+
+
+    private func automaticAdjustment(name: String, amount: Double, state: inout GenerationState) {
+        if let index = state.rows.firstIndex(where: { $0.name == name }) {
+            state.rows[index] = state.rows[index].automaticAdjustment(amount: amount)
+            return
+        }
+
+        // Created by the adjustment engine, so mark it Automatic with
+        // a priorState of Ingredient: undoAutoAdjustments only visits
+        // Automatic rows and deletes those whose priorState is
+        // Ingredient, which reverses this creation.
+        state.rows.append(MealIngredient(name: name,
+                                         amount: amount,
+                                         adjustment: Constants.Automatic,
+                                         priorState: Constants.Ingredient))
+    }
+
+
+    private func setMacroActuals(id: String, calories: Double, fat: Double, fiber: Double, netcarbs: Double, protein: Double, state: inout GenerationState) {
+        if let index = state.rows.firstIndex(where: { $0.id == id }) {
+            state.rows[index] = state.rows[index].setMacroActuals(calories: calories, fat: fat, fiber: fiber, netcarbs: netcarbs, protein: protein)
+        }
     }
 }

@@ -1,4 +1,5 @@
 import XCTest
+import Combine
 @testable import Nutrition
 
 
@@ -201,14 +202,12 @@ final class MealPlannerTests: XCTestCase {
         XCTAssertEqual(env.row("Cheese")!.amount, 3)
     }
 
-    // KNOWN QUIRK (nutrition.md P1.1), pinned deliberately: the
-    // maximum constraint is only checked when the target row already
-    // exists. When the adjustment CREATES the row, the first
-    // application bypasses the cap entirely — here amount 5 lands in
-    // the meal even though the rule's maximum is 3. Phase 2 fixes
-    // this; this test will be replaced by one asserting the row is
-    // NOT created.
-    func testQuirkMaximumConstraintNotEnforcedWhenAdjustmentCreatesRow() {
+    // Phase-2 fix for the P1.1 quirk (this test deliberately replaces
+    // the Phase-1 pin): the maximum constraint is now ALSO enforced
+    // when the adjustment would create the row. A rule whose own
+    // amount exceeds its maximum must not sneak a too-big row into
+    // the meal.
+    func testMaximumConstraintEnforcedWhenAdjustmentCreatesRow() {
         let env = SolverEnv(
             ingredients: [Fixtures.ingredient(name: "Treat A", food: "Treat",
                                               calories: 1, protein: 0.1)],
@@ -216,9 +215,22 @@ final class MealPlannerTests: XCTestCase {
             adjustments: [Adjustment(name: "Treat", amount: 5, constraints: true, maximum: 3)])
         env.generate()
 
-        let row = env.row("Treat")
-        XCTAssertNotNil(row)
-        XCTAssertEqual(row!.amount, 5)   // exceeds maximum 3
+        XCTAssertNil(env.row("Treat"))
+        XCTAssertTrue(env.mealIngredientMgr.mealIngredients.isEmpty)
+    }
+
+    func testMaximumConstraintAllowsCreationWithinCap() {
+        // The created-row path still applies when the rule fits its
+        // own cap (amount 2 <= maximum 3), and the cap then stops
+        // further growth (2+2 = 4 > 3).
+        let env = SolverEnv(
+            ingredients: [Fixtures.ingredient(name: "Treat A", food: "Treat",
+                                              calories: 1, protein: 0.1)],
+            foods: [Fixtures.food("Treat", current: "Treat A")],
+            adjustments: [Adjustment(name: "Treat", amount: 2, constraints: true, maximum: 3)])
+        env.generate()
+
+        XCTAssertEqual(env.row("Treat")!.amount, 2)
     }
 
     // ------------------------------------------------------------
@@ -310,6 +322,24 @@ final class MealPlannerTests: XCTestCase {
 
         XCTAssertEqual(env.macrosMgr.macros.calories, 0)
         XCTAssertEqual(env.mealIngredientMgr.mealIngredients.count, 1)
+    }
+
+    // Phase-2 batching: the whole generation commits the meal rows
+    // in ONE published assignment (and therefore one UserDefaults
+    // serialize) instead of one per row mutation.
+    func testGeneratePublishesRowsExactlyOnce() {
+        let env = proteinBoundEnv()
+
+        var publishes = 0
+        let cancellable = env.mealIngredientMgr.$mealIngredients
+            .dropFirst()                       // skip the current-value replay
+            .sink { _ in publishes += 1 }
+        env.generate()
+        cancellable.cancel()
+
+        XCTAssertEqual(publishes, 1)
+        // And the committed state is the solved one.
+        XCTAssertEqual(env.row("Cheese")!.amount, 5)
     }
 
     func testGroupRowUsesSelectedMemberForMacros() {
