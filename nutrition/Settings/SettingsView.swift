@@ -114,13 +114,12 @@ struct SettingsView: View {
     // ============================================================
     // Test connection — fires a 1-token /v1/messages call (no
     // tools, no images) just to verify the key. Cheap and quick.
-    // We persist the typed key first so the test uses what's in
-    // the field, not the previously-saved value.
+    // The ping uses the in-field key directly — nothing is written
+    // to the Keychain until Save.
     // ============================================================
     private func testConnection() {
         let trimmed = apiKey.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
-        KeychainStore.setAnthropicKey(trimmed)
 
         isTesting = true
         testResult = nil

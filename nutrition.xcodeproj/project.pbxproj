@@ -33,6 +33,7 @@
 		3485E52328033B75004022E9 /* CheckmarkToggleStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3485E52228033B75004022E9 /* CheckmarkToggleStyle.swift */; };
 		349EE53127C99AC30072255A /* NutritionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE53027C99AC30072255A /* NutritionApp.swift */; };
 		349EE53327C99AC30072255A /* Tabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE53227C99AC30072255A /* Tabs.swift */; };
+		FE0500000000000000000002 /* UserDefaultsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0500000000000000000001 /* UserDefaultsStore.swift */; };
 		349EE53527C99AC40072255A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 349EE53427C99AC40072255A /* Assets.xcassets */; };
 		349EE53827C99AC40072255A /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 349EE53727C99AC40072255A /* Preview Assets.xcassets */; };
 		349EE54427C9A3690072255A /* IngredientList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 349EE54327C9A3690072255A /* IngredientList.swift */; };
@@ -127,6 +128,7 @@
 		349EE52D27C99AC30072255A /* Nutrition.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nutrition.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		349EE53027C99AC30072255A /* NutritionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionApp.swift; sourceTree = "<group>"; };
 		349EE53227C99AC30072255A /* Tabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tabs.swift; sourceTree = "<group>"; };
+		FE0500000000000000000001 /* UserDefaultsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsStore.swift; sourceTree = "<group>"; };
 		349EE53427C99AC40072255A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		349EE53727C99AC40072255A /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		349EE54327C9A3690072255A /* IngredientList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientList.swift; sourceTree = "<group>"; };
@@ -271,6 +273,7 @@
 				3402286927D7C7C800741FBB /* nutrition.entitlements */,
 				349EE53027C99AC30072255A /* NutritionApp.swift */,
 				349EE53227C99AC30072255A /* Tabs.swift */,
+				FE0500000000000000000001 /* UserDefaultsStore.swift */,
 				FE0100000000000000000010 /* Food */,
 				FE0100000000000000000011 /* History */,
 				34DE420627FA6DF40078448F /* Meal */,
@@ -566,6 +569,7 @@
 				34E3237C28F2542900832D9C /* VitaminMineral.swift in Sources */,
 				349EE57227CAB4760072255A /* Ingredient.swift in Sources */,
 				349EE53327C99AC30072255A /* Tabs.swift in Sources */,
+				FE0500000000000000000002 /* UserDefaultsStore.swift in Sources */,
 				345F5F0A27E0EF1400129BAC /* IngredientRow.swift in Sources */,
 				344D200227CDC53800343108 /* MealConfigure.swift in Sources */,
 				34E3237A28F2542900832D9C /* VitaminMineralList.swift in Sources */,

@@ -106,10 +106,13 @@ enum ConfigSync {
         // 2. Fetch all five files concurrently (text + sha each).
         let fetched = try await fetchAll(token: token)
 
-        // 3. Change detection ("CRC"): if every sha matches the cache, bail early.
+        // 3. Change detection ("CRC"): if every sha matches the cache, bail
+        //    early — but only when the Documents file cache actually exists.
+        //    The shas (UserDefaults) and the files (Documents) can desync,
+        //    and a sha-only match would then lie "Up to date" forever.
         let newShas = fetched.mapValues { $0.sha }
         let cachedShas = ConfigStore.shared.cachedShas()
-        if newShas == cachedShas {
+        if newShas == cachedShas && ConfigStore.shared.cacheFilesExist() {
             return .upToDate
         }
 
@@ -282,9 +285,11 @@ enum ConfigSync {
     //
     // Collects EVERY violation (does not stop at the first) so the user sees the
     // full picture. Returns an empty array when the config is internally
-    // consistent.
+    // consistent. Internal (not private): ConfigStore.loadInitial() re-runs the
+    // SAME validation against the launch-time cache so a mixed/inconsistent
+    // cache can't sneak past the checks a refresh would have to clear.
 
-    private static func validate(_ data: ConfigData) -> [String] {
+    static func validate(_ data: ConfigData) -> [String] {
         var errors: [String] = []
 
         let foodNames = Set(data.foods.map { $0.name })

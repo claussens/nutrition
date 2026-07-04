@@ -59,17 +59,36 @@ final class ConfigStore: ObservableObject {
     // ------------------------------------------------------------------------
 
     /// Load + parse the config at launch. Prefers the Documents cache (the last
-    /// successful refresh); falls back to the bundled YAML copies. Publishes the
-    /// result on `data`. Never throws — on any failure `data` is left nil and the
-    /// problem is logged, so the orchestrator can decide how to surface it.
+    /// successful refresh) and re-runs the SAME referential validation ConfigSync
+    /// applies on refresh — a cache that parses but is internally inconsistent
+    /// (e.g. a mixed-version write) is rejected, and we fall back to the bundled
+    /// seed. Never throws — if even the bundled seed fails, `data` is left nil
+    /// and the problem is logged, so the orchestrator can decide how to surface it.
     func loadInitial() {
         do {
-            let texts = try loadSectionTexts()
-            data = try parse(texts)
+            let parsed = try parse(loadSectionTexts())
+            let violations = ConfigSync.validate(parsed)
+            guard violations.isEmpty else {
+                throw ConfigStoreError.validation(violations)
+            }
+            data = parsed
         } catch {
-            // Leave `data` as-is (nil on first run). The app can prompt a manual
-            // refresh; we don't crash the launch over a missing/corrupt cache.
-            print("ConfigStore.loadInitial failed: \(error)")
+            print("ConfigStore.loadInitial: cached config rejected (\(error)); falling back to the bundled seed.")
+            do {
+                let parsed = try parse(bundledSectionTexts())
+                let violations = ConfigSync.validate(parsed)
+                if !violations.isEmpty {
+                    // The bundled seed ships with the app — a violation here is
+                    // a build-time data bug. Log loudly but still publish; an
+                    // internally imperfect seed beats an unusable app.
+                    print("ConfigStore.loadInitial: bundled seed has \(violations.count) validation issue(s): \(violations)")
+                }
+                data = parsed
+            } catch {
+                // Leave `data` nil. The app can prompt a manual refresh; we
+                // don't crash the launch over a missing/corrupt config.
+                print("ConfigStore.loadInitial: bundled seed ALSO failed: \(error)")
+            }
         }
     }
 
@@ -85,6 +104,19 @@ final class ConfigStore: ObservableObject {
                 texts[name] = text
                 continue
             }
+            guard let bundled = bundledURL(for: name) else {
+                throw ConfigStoreError.missingResource(name)
+            }
+            texts[name] = try String(contentsOf: bundled, encoding: .utf8)
+        }
+        return texts
+    }
+
+    /// Read each section's YAML text from the app bundle only (the pristine
+    /// seed) — the fallback when the Documents cache fails parse/validation.
+    private func bundledSectionTexts() throws -> [String: String] {
+        var texts: [String: String] = [:]
+        for name in File.all {
             guard let bundled = bundledURL(for: name) else {
                 throw ConfigStoreError.missingResource(name)
             }
@@ -129,9 +161,12 @@ final class ConfigStore: ObservableObject {
     // Applying / persisting
     // ------------------------------------------------------------------------
 
-    /// Atomically adopt `newData`: re-encode each section to YAML, write all five
-    /// files into Documents, then publish the new value on `data`. If any encode
-    /// or write fails, nothing is published and the previous state is untouched.
+    /// Atomically adopt `newData`: re-encode each section to YAML, stage all five
+    /// files in a fresh temp directory, and only once EVERY write has succeeded
+    /// swap them into Documents. A failure at any point before the swap leaves
+    /// the live cache byte-identical — no mixed-version cache from a mid-write
+    /// failure. If any encode or write fails, nothing is published and the
+    /// previous state is untouched.
     func apply(_ newData: ConfigData) throws {
         let encoder = YAMLEncoder()
 
@@ -144,12 +179,31 @@ final class ConfigStore: ObservableObject {
             File.rda:         try encoder.encode(newData.rda),
         ]
 
-        // Persist (atomic per file). Throws on the first failure.
+        // Stage: write the complete file set into a unique temp directory.
+        // Any write failure throws here, before the live cache is touched.
+        let fm = FileManager.default
+        let staging = fm.temporaryDirectory
+            .appendingPathComponent("config-staging-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: staging, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: staging) }
         for (name, text) in texts {
-            guard let url = documentsURL(for: name) else {
+            try text.write(to: staging.appendingPathComponent(name),
+                           atomically: true, encoding: .utf8)
+        }
+
+        // Swap: move each staged file into place (replaceItemAt is atomic
+        // per file). Every byte was already written successfully above, so
+        // the only remaining failure mode is the swap itself.
+        for name in texts.keys {
+            guard let dst = documentsURL(for: name) else {
                 throw ConfigStoreError.documentsUnavailable
             }
-            try text.write(to: url, atomically: true, encoding: .utf8)
+            let src = staging.appendingPathComponent(name)
+            if fm.fileExists(atPath: dst.path) {
+                _ = try fm.replaceItemAt(dst, withItemAt: src)
+            } else {
+                try fm.moveItem(at: src, to: dst)
+            }
         }
 
         data = newData
@@ -167,6 +221,18 @@ final class ConfigStore: ObservableObject {
     /// Persist the per-file blob shas after a successful apply.
     func saveShas(_ shas: [String: String]) {
         UserDefaults.standard.set(shas, forKey: Self.shasDefaultsKey)
+    }
+
+    /// True when every section file actually exists in the Documents cache.
+    /// The sha store (UserDefaults) and the file cache (Documents) live in
+    /// different places and can desync — a sha match alone would then report
+    /// "Up to date" forever while the cache is missing. ConfigSync checks this
+    /// before honoring its sha short-circuit.
+    func cacheFilesExist() -> Bool {
+        File.all.allSatisfy { name in
+            guard let url = documentsURL(for: name) else { return false }
+            return FileManager.default.fileExists(atPath: url.path)
+        }
     }
 
     // ------------------------------------------------------------------------
@@ -367,6 +433,8 @@ enum ConfigStoreError: LocalizedError {
     case ingredientEncode(name: String, underlying: Error)
     /// A config ingredient's JSON failed to decode into a runtime Ingredient.
     case ingredientDecode(name: String, underlying: Error)
+    /// The cached config parsed but failed referential validation at launch.
+    case validation([String])
 
     var errorDescription: String? {
         switch self {
@@ -380,6 +448,9 @@ enum ConfigStoreError: LocalizedError {
             return "Failed to encode ingredient '\(name)': \(underlying.localizedDescription)"
         case .ingredientDecode(let name, let underlying):
             return "Failed to build runtime ingredient '\(name)': \(underlying.localizedDescription)"
+        case .validation(let violations):
+            let body = violations.map { "  • \($0)" }.joined(separator: "\n")
+            return "Cached config failed validation (\(violations.count) issue(s)):\n\(body)"
         }
     }
 }

@@ -6,6 +6,19 @@ struct ProfileEdit: View {
     @EnvironmentObject var profileMgr: ProfileMgr
     @Binding var tab: String
 
+    // Local editing draft. Every row below binds to this copy, NOT
+    // to profileMgr.profile — so keystrokes stay in the view and
+    // nothing touches the manager (or disk) until Save. Cancel just
+    // throws the draft away. The placeholder value is replaced by
+    // the real active profile in onAppear (fires on every tab
+    // selection) and whenever the active profile switches.
+    @State private var draft = Profile(
+        dateOfBirth: Date(), gender: .male, height: 0,
+        bodyMassFromHealthKit: false, bodyMass: 0,
+        bodyFatPercentageFromHealthKit: false, bodyFatPercentage: 0,
+        activeCaloriesBurned: 0, proteinRatio: 0,
+        calorieDeficit: 0, netCarbsMaximum: 0)
+
 
     var body: some View {
         Form {
@@ -18,9 +31,10 @@ struct ProfileEdit: View {
                 NavigationLink("Scanner Settings", destination: SettingsView())
                 NavigationLink("Verify All Ingredients", destination: VerifyAllWalkthrough())
             }
-            // Profile switcher. The Base/Daily/Derived sections below
-            // all read $profileMgr.profile.X, so changing the active
-            // profile here makes the rest of the page reflect it.
+            // Profile switcher. Switching re-points the manager's
+            // active id; the onChange below re-snapshots the draft so
+            // the Base/Daily/Derived sections reflect the new profile
+            // (in-flight edits to the old one are discarded).
             Section(header: Text("Profile")) {
                 Picker("Active", selection: Binding(
                     get: { profileMgr.profile.id },
@@ -29,27 +43,27 @@ struct ProfileEdit: View {
                         Text(p.name.isEmpty ? "(unnamed)" : p.name).tag(p.id)
                     }
                 }
-                NameValue("Name", $profileMgr.profile.name, edit: true)
+                NameValue("Name", $draft.name, edit: true)
                 Button(action: { profileMgr.addProfile() }) {
                     Label("Add Profile", systemImage: "plus.circle")
                 }
                   .foregroundColor(Color.theme.blueYellow)
             }
             Section(header: Text("Base")) {
-                NameValue("Date of Birth", $profileMgr.profile.dateOfBirth, control: .date)
-                NameValue("Gender", $profileMgr.profile.gender, options: Gender.allCases, control: .picker)
-                NameValue("Height", $profileMgr.profile.height, .inch, edit: true)
+                NameValue("Date of Birth", $draft.dateOfBirth, control: .date)
+                NameValue("Gender", $draft.gender, options: Gender.allCases, control: .picker)
+                NameValue("Height", $draft.height, .inch, edit: true)
                 // Macro Mode — picker selects the algorithm; chevron
                 // opens the research-backed explanation page.
                 NameValue("Macro Mode", description: "algorithm driving daily protein/carb/fat goals",
-                          $profileMgr.profile.macroMode,
+                          $draft.macroMode,
                           options: MacroMode.allCases, control: .picker)
-                NavigationLink(destination: MacroModeDetail(profile: profileMgr.profile)) {
+                NavigationLink(destination: MacroModeDetail(profile: draft)) {
                     HStack {
                         Text("About macro modes")
                           .font(.callout)
                         Spacer()
-                        Text(profileMgr.profile.macroMode.label)
+                        Text(draft.macroMode.label)
                           .font(.caption)
                           .foregroundColor(Color.theme.blackWhiteSecondary)
                     }
@@ -57,109 +71,118 @@ struct ProfileEdit: View {
                 // Net Carbs Maximum is the editable ceiling in .keto;
                 // in ratio modes the carb grams are derived, so we
                 // show a read-only target row instead.
-                if profileMgr.profile.macroMode == .keto {
-                    NameValue("Net Carbs Maximum", description: "daily consumption maximum (carbs - fiber)", $profileMgr.profile.netCarbsMaximum, edit: true)
+                if draft.macroMode == .keto {
+                    NameValue("Net Carbs Maximum", description: "daily consumption maximum (carbs - fiber)", $draft.netCarbsMaximum, edit: true)
                 } else {
                     NameValue("Net Carbs Target", description: "computed from macro mode (cals × carbs%)",
-                              .constant(profileMgr.profile.effectiveNetCarbsMaximum))
+                              .constant(draft.effectiveNetCarbsMaximum))
                 }
-                NameValue("Protein Ratio", description: "daily protein grams required / lb of lean body mass (floor in ratio modes)", $profileMgr.profile.proteinRatio, precision: 2, edit: true)
-                NameValue("Caloric Deficit", description: "percentage to adjust daily caloric and macro goals", $profileMgr.profile.calorieDeficit, .percentage, edit: true)
+                NameValue("Protein Ratio", description: "daily protein grams required / lb of lean body mass (floor in ratio modes)", $draft.proteinRatio, precision: 2, edit: true)
+                NameValue("Caloric Deficit", description: "percentage to adjust daily caloric and macro goals", $draft.calorieDeficit, .percentage, edit: true)
             }
             Section(header: Text("Daily Metrics")) {
-                NameValue("Weight from Health App", description: "source daily weight updates from apple health app", $profileMgr.profile.bodyMassFromHealthKit, control: .toggle)
-                if !profileMgr.profile.bodyMassFromHealthKit {
-                    NameValue("Weight", description: "body mass", $profileMgr.profile.bodyMass, .pound, precision: 1, edit: true)
+                NameValue("Weight from Health App", description: "source daily weight updates from apple health app", $draft.bodyMassFromHealthKit, control: .toggle)
+                if !draft.bodyMassFromHealthKit {
+                    NameValue("Weight", description: "body mass", $draft.bodyMass, .pound, precision: 1, edit: true)
                 }
-                NameValue("Body Fat % from Health App", description: "source daily body fat % updates from apple health app", $profileMgr.profile.bodyFatPercentageFromHealthKit, control: .toggle)
-                if !profileMgr.profile.bodyFatPercentageFromHealthKit {
-                    NameValue("Body Fat %", description: "from apple health app", $profileMgr.profile.bodyFatPercentage, .percentage, precision: 1, edit: true)
+                NameValue("Body Fat % from Health App", description: "source daily body fat % updates from apple health app", $draft.bodyFatPercentageFromHealthKit, control: .toggle)
+                if !draft.bodyFatPercentageFromHealthKit {
+                    NameValue("Body Fat %", description: "from apple health app", $draft.bodyFatPercentage, .percentage, precision: 1, edit: true)
                 }
             }
             Section(header: Text("Derived Profile Data")) {
                 NavigationLink("Vitamins and Minerals", destination: VitaminMineralList())
-                NameValue("Age", $profileMgr.profile.age, .year, precision: 1)
-                NameValue("Weight", description: "body mass (from health app)", $profileMgr.profile.bodyMassKg, .kilogram)
-                NameValue("Height", $profileMgr.profile.heightCm, .centimeter)
-                NameValue("Body Mass Index", description: "normal <25, fat >25, obese >30", $profileMgr.profile.bodyMassIndex, precision: 1)
-                NameValue("Lean Body Mass", description: "non-fat body mass", $profileMgr.profile.leanBodyMass, .pound)
-                NameValue("Fat Mass", description: "weight * body fat percentage", $profileMgr.profile.fatMass, .pound)
-                NameValue("Water", description: "daily consumption minimum, weight/2 * ~.03", $profileMgr.profile.waterLiters, .liter, precision: 1)
+                NameValue("Age", $draft.age, .year, precision: 1)
+                NameValue("Weight", description: "body mass (from health app)", $draft.bodyMassKg, .kilogram)
+                NameValue("Height", $draft.heightCm, .centimeter)
+                NameValue("Body Mass Index", description: "normal <25, fat >25, obese >30", $draft.bodyMassIndex, precision: 1)
+                NameValue("Lean Body Mass", description: "non-fat body mass", $draft.leanBodyMass, .pound)
+                NameValue("Fat Mass", description: "weight * body fat percentage", $draft.fatMass, .pound)
+                NameValue("Water", description: "daily consumption minimum, weight/2 * ~.03", $draft.waterLiters, .liter, precision: 1)
 
             }
             Section(header: Text("Gross (without the caloric deficit)")) {
                 Group {
-                    NavigationLink(destination: ProfileMetricDetail(metric: .baseMetabolicRate, profile: profileMgr.profile)) {
-                        NameValue("Base Metabolic Rate", description: "Mifflin-St Jeor", $profileMgr.profile.caloriesBaseMetabolicRate, .calorie)
+                    NavigationLink(destination: ProfileMetricDetail(metric: .baseMetabolicRate, profile: draft)) {
+                        NameValue("Base Metabolic Rate", description: "Mifflin-St Jeor", $draft.caloriesBaseMetabolicRate, .calorie)
                     }
-                    NavigationLink(destination: ProfileMetricDetail(metric: .restingCalories, profile: profileMgr.profile)) {
-                        NameValue("Resting Calories", description: "Mifflin-St Jeor BMR * 1.2", $profileMgr.profile.caloriesResting, .calorie)
+                    NavigationLink(destination: ProfileMetricDetail(metric: .restingCalories, profile: draft)) {
+                        NameValue("Resting Calories", description: "Mifflin-St Jeor BMR * 1.2", $draft.caloriesResting, .calorie)
                     }
-                    NavigationLink(destination: ProfileMetricDetail(metric: .activeCaloriesBurned, profile: profileMgr.profile)) {
-                        NameValue("Active Calories Burned", description: "daily calories burned due to exercise/movement", $profileMgr.profile.activeCaloriesBurned, .calorie)
+                    NavigationLink(destination: ProfileMetricDetail(metric: .activeCaloriesBurned, profile: draft)) {
+                        NameValue("Active Calories Burned", description: "daily calories burned due to exercise/movement", $draft.activeCaloriesBurned, .calorie)
                     }
-                    NavigationLink(destination: ProfileMetricDetail(metric: .unadjustedCaloricGoal, profile: profileMgr.profile)) {
-                        NameValue("Unadjusted Caloric Goal", description: "resting + active energy burned", $profileMgr.profile.caloriesGoalUnadjusted, .calorie)
+                    NavigationLink(destination: ProfileMetricDetail(metric: .unadjustedCaloricGoal, profile: draft)) {
+                        NameValue("Unadjusted Caloric Goal", description: "resting + active energy burned", $draft.caloriesGoalUnadjusted, .calorie)
                     }
-                    NavigationLink(destination: ProfileMetricDetail(metric: .fatGoalGross, profile: profileMgr.profile)) {
-                        NameValue("Fat Goal", description: "caloric goal - netCarbs - protein", $profileMgr.profile.fatGoalUnadjusted)
+                    NavigationLink(destination: ProfileMetricDetail(metric: .fatGoalGross, profile: draft)) {
+                        NameValue("Fat Goal", description: "caloric goal - netCarbs - protein", $draft.fatGoalUnadjusted)
                     }
-                    NavigationLink(destination: ProfileMetricDetail(metric: .fiberMinimumGross, profile: profileMgr.profile)) {
-                        NameValue("Fiber Minimum", description: "14g fiber/1k consumed calories", $profileMgr.profile.fiberMinimumUnadjusted)
+                    NavigationLink(destination: ProfileMetricDetail(metric: .fiberMinimumGross, profile: draft)) {
+                        NameValue("Fiber Minimum", description: "14g fiber/1k consumed calories", $draft.fiberMinimumUnadjusted)
                     }
-                    NavigationLink(destination: ProfileMetricDetail(metric: .netCarbsMaximum, profile: profileMgr.profile)) {
-                        NameValue("Net Carbs Maximum", description: "consumption max (carbs - fiber)", .constant(profileMgr.profile.effectiveNetCarbsMaximumUnadjusted))
+                    NavigationLink(destination: ProfileMetricDetail(metric: .netCarbsMaximum, profile: draft)) {
+                        NameValue("Net Carbs Maximum", description: "consumption max (carbs - fiber)", .constant(draft.effectiveNetCarbsMaximumUnadjusted))
                     }
-                    NavigationLink(destination: ProfileMetricDetail(metric: .proteinGoal, profile: profileMgr.profile)) {
-                        NameValue("Protein Goal", description: "lean body mass * protein ratio", $profileMgr.profile.proteinGoalUnadjusted)
+                    NavigationLink(destination: ProfileMetricDetail(metric: .proteinGoal, profile: draft)) {
+                        NameValue("Protein Goal", description: "lean body mass * protein ratio", $draft.proteinGoalUnadjusted)
                     }
-                    NavigationLink(destination: ProfileMetricDetail(metric: .fatPercentGross, profile: profileMgr.profile)) {
-                        NameValue("Fat %", description: "percentage of calories from fat", $profileMgr.profile.fatGoalPercentageUnadjusted, .percentage)
+                    NavigationLink(destination: ProfileMetricDetail(metric: .fatPercentGross, profile: draft)) {
+                        NameValue("Fat %", description: "percentage of calories from fat", $draft.fatGoalPercentageUnadjusted, .percentage)
                     }
-                    NavigationLink(destination: ProfileMetricDetail(metric: .netCarbsPercentGross, profile: profileMgr.profile)) {
-                        NameValue("Net Carbs %", description: "percentage of calories from carbs", $profileMgr.profile.netCarbsMaximumPercentageUnadjusted, .percentage)
+                    NavigationLink(destination: ProfileMetricDetail(metric: .netCarbsPercentGross, profile: draft)) {
+                        NameValue("Net Carbs %", description: "percentage of calories from carbs", $draft.netCarbsMaximumPercentageUnadjusted, .percentage)
                     }
                 }
-                NavigationLink(destination: ProfileMetricDetail(metric: .proteinPercentGross, profile: profileMgr.profile)) {
-                    NameValue("Protein %", description: "percentage of calories from protein", $profileMgr.profile.proteinGoalPercentageUnadjusted, .percentage)
+                NavigationLink(destination: ProfileMetricDetail(metric: .proteinPercentGross, profile: draft)) {
+                    NameValue("Protein %", description: "percentage of calories from protein", $draft.proteinGoalPercentageUnadjusted, .percentage)
                 }
             }
             Section(header: Text("Net (with the caloric deficit)")) {
-                NavigationLink(destination: ProfileMetricDetail(metric: .unadjustedCaloricGoal, profile: profileMgr.profile)) {
-                    NameValue("Unadjusted Caloric Goal", description: "gross caloric goal", $profileMgr.profile.caloriesGoalUnadjusted, .calorie)
+                NavigationLink(destination: ProfileMetricDetail(metric: .unadjustedCaloricGoal, profile: draft)) {
+                    NameValue("Unadjusted Caloric Goal", description: "gross caloric goal", $draft.caloriesGoalUnadjusted, .calorie)
                 }
-                NavigationLink(destination: ProfileMetricDetail(metric: .caloricDeficit, profile: profileMgr.profile)) {
-                    NameValue("Caloric Deficit", description: "adjustment to daily gross caloric goal", $profileMgr.profile.calorieDeficit, .percentage)
+                NavigationLink(destination: ProfileMetricDetail(metric: .caloricDeficit, profile: draft)) {
+                    NameValue("Caloric Deficit", description: "adjustment to daily gross caloric goal", $draft.calorieDeficit, .percentage)
                 }
-                NavigationLink(destination: ProfileMetricDetail(metric: .netCaloricGoal, profile: profileMgr.profile)) {
-                    NameValue("Net Caloric Goal", description: "with calorie deficit applied", $profileMgr.profile.caloriesGoal, .calorie)
+                NavigationLink(destination: ProfileMetricDetail(metric: .netCaloricGoal, profile: draft)) {
+                    NameValue("Net Caloric Goal", description: "with calorie deficit applied", $draft.caloriesGoal, .calorie)
                 }
-                NavigationLink(destination: ProfileMetricDetail(metric: .fatGoalNet, profile: profileMgr.profile)) {
-                    NameValue("Fat Goal", description: "net caloric goal - netCarbs - protein", $profileMgr.profile.fatGoal)
+                NavigationLink(destination: ProfileMetricDetail(metric: .fatGoalNet, profile: draft)) {
+                    NameValue("Fat Goal", description: "net caloric goal - netCarbs - protein", $draft.fatGoal)
                 }
-                NavigationLink(destination: ProfileMetricDetail(metric: .fiberMinimumNet, profile: profileMgr.profile)) {
-                    NameValue("Fiber Minimum", description: "14g fiber/1000 consumed cal", $profileMgr.profile.fiberMinimum)
+                NavigationLink(destination: ProfileMetricDetail(metric: .fiberMinimumNet, profile: draft)) {
+                    NameValue("Fiber Minimum", description: "14g fiber/1000 consumed cal", $draft.fiberMinimum)
                 }
-                NavigationLink(destination: ProfileMetricDetail(metric: .netCarbsMaximum, profile: profileMgr.profile)) {
-                    NameValue("Net Carbs Maximum", description: "consumption max (carbs - fiber)", .constant(profileMgr.profile.effectiveNetCarbsMaximum))
+                NavigationLink(destination: ProfileMetricDetail(metric: .netCarbsMaximum, profile: draft)) {
+                    NameValue("Net Carbs Maximum", description: "consumption max (carbs - fiber)", .constant(draft.effectiveNetCarbsMaximum))
                 }
-                NavigationLink(destination: ProfileMetricDetail(metric: .proteinGoal, profile: profileMgr.profile)) {
-                    NameValue("Protein Goal", description: "lean body mass * protein ratio", $profileMgr.profile.proteinGoal)
+                NavigationLink(destination: ProfileMetricDetail(metric: .proteinGoal, profile: draft)) {
+                    NameValue("Protein Goal", description: "lean body mass * protein ratio", $draft.proteinGoal)
                 }
-                NavigationLink(destination: ProfileMetricDetail(metric: .fatPercentNet, profile: profileMgr.profile)) {
-                    NameValue("Fat %", description: "percentage of net calories from fat", $profileMgr.profile.fatGoalPercentage, .percentage)
+                NavigationLink(destination: ProfileMetricDetail(metric: .fatPercentNet, profile: draft)) {
+                    NameValue("Fat %", description: "percentage of net calories from fat", $draft.fatGoalPercentage, .percentage)
                 }
-                NavigationLink(destination: ProfileMetricDetail(metric: .netCarbsPercentNet, profile: profileMgr.profile)) {
-                    NameValue("Net Carbs %", description: "percentage of net calories from carbs", $profileMgr.profile.netCarbsMaximumPercentage, .percentage)
+                NavigationLink(destination: ProfileMetricDetail(metric: .netCarbsPercentNet, profile: draft)) {
+                    NameValue("Net Carbs %", description: "percentage of net calories from carbs", $draft.netCarbsMaximumPercentage, .percentage)
                 }
-                NavigationLink(destination: ProfileMetricDetail(metric: .proteinPercentNet, profile: profileMgr.profile)) {
-                    NameValue("Protein %", description: "percentage of net calories from protein", $profileMgr.profile.proteinGoalPercentage, .percentage)
+                NavigationLink(destination: ProfileMetricDetail(metric: .proteinPercentNet, profile: draft)) {
+                    NameValue("Protein %", description: "percentage of net calories from protein", $draft.proteinGoalPercentage, .percentage)
                 }
             }
         }
         // .environment(\.defaultMinListRowHeight, 60)
         // .environment(\.defaultMinListHeaderHeight, 45)
           .padding([.leading, .trailing], -20)
+          // Snapshot the active profile into the draft whenever the
+          // page appears (TabView re-fires onAppear on each tab
+          // selection) and whenever the active profile changes
+          // (switcher picker / Add Profile) — the new profile's
+          // values replace any in-flight edits to the old one.
+          .onAppear { draft = profileMgr.profile }
+          .onChange(of: profileMgr.activeProfileId) { _ in
+              draft = profileMgr.profile
+          }
           .navigationBarBackButtonHidden(true)
           .toolbar {
               ToolbarItem(placement: .navigation) {
@@ -182,16 +205,22 @@ struct ProfileEdit: View {
     }
 
 
+    // Cancel = discard the draft. Nothing was written to the manager
+    // while editing, so there is nothing to roll back — just re-sync
+    // the draft (in case the tab reappears without onAppear) and go.
     func cancel() {
         withAnimation {
-            profileMgr.cancel()
+            draft = profileMgr.profile
             tab = "Meal"
         }
     }
 
 
+    // Save = the single commit point: splice the draft into the
+    // manager (persists via ProfileMgr's didSet) and flush.
     func save() {
         withAnimation {
+            profileMgr.profile = draft
             profileMgr.serialize()
             tab = "Meal"
         }

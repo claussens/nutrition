@@ -48,6 +48,13 @@ class MealIngredientMgr: ObservableObject {
     // "mealIngredient.<id>", so user edits persist between launches.
     private var storageKey: String { "mealIngredient.\(profileId)" }
 
+    // Persistence codec. Built per use because storageKey re-points
+    // when the profile switches. On decode failure the store backs up
+    // the blob under "<key>.corrupt" and loudly logs before we reseed.
+    private var store: UserDefaultsStore<[MealIngredient]> {
+        UserDefaultsStore(key: storageKey)
+    }
+
 
     @Published var mealIngredients: [MealIngredient] = [] {
         didSet {
@@ -78,42 +85,16 @@ class MealIngredientMgr: ObservableObject {
 
     // Shared init/reload body. If the profile has saved (user-edited)
     // meal data, load it so edits persist between launches. Otherwise
-    // (first run / fresh profile) seed the meals from ConfigStore.
+    // (first run / fresh profile — or a corrupt blob, which the store
+    // has backed up and logged) seed the meals from ConfigStore.
     private func loadOrSeed() {
-        self.mealIngredients = MealIngredientMgr.load(forProfileId: profileId)
+        self.mealIngredients = store.load() ?? []
         if mealIngredients.isEmpty { resetMealIngredients() }
     }
 
 
-    // Load the saved (user-edited) meal ingredients for `profileId`
-    // from per-profile UserDefaults. Returns [] when none are saved
-    // yet (caller seeds defaults from config).
-    private static func load(forProfileId profileId: String) -> [MealIngredient] {
-        let key = "mealIngredient.\(profileId)"
-        if let data = UserDefaults.standard.data(forKey: key),
-           let savedItems = try? JSONDecoder().decode([MealIngredient].self, from: data) {
-            return savedItems
-        }
-        return []
-    }
-
-
     func serialize() {
-        if let encodedData = try? JSONEncoder().encode(mealIngredients) {
-            UserDefaults.standard.set(encodedData, forKey: storageKey)
-        }
-    }
-
-
-    func deserialize() {
-        guard
-          let data = UserDefaults.standard.data(forKey: storageKey),
-          let savedItems = try? JSONDecoder().decode([MealIngredient].self, from: data)
-        else {
-            return
-        }
-
-        self.mealIngredients = savedItems
+        store.save(mealIngredients)
     }
 
 

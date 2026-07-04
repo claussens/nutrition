@@ -58,16 +58,14 @@ struct Food: Codable, Identifiable, Equatable {
 
 class FoodMgr: ObservableObject {
 
-    @Published var foods: [Food] = [] {
-        didSet { serialize() }
-    }
-
-
-    // Seeded in code, exactly like IngredientMgr — the seed is the
+    // Config-owned, exactly like IngredientMgr — the config is the
     // source of truth and is rebuilt every launch. Each entry is a
     // food and its current (default) member ingredient. Runtime
-    // changes (ensure / setCurrent) are serialized but, like
-    // ingredient edits, are not read back on the next launch.
+    // changes (ensure / setCurrent) are session-scoped; there is no
+    // UserDefaults persistence.
+    @Published var foods: [Food] = []
+
+
     init() {
         self.foods = ConfigStore.shared.runtimeFoods()
     }
@@ -214,13 +212,6 @@ class FoodMgr: ObservableObject {
     func remove(name: String) {
         foods.removeAll { $0.name == name }
     }
-
-
-    func serialize() {
-        if let data = try? JSONEncoder().encode(foods) {
-            UserDefaults.standard.set(data, forKey: "food")
-        }
-    }
 }
 
 
@@ -329,15 +320,19 @@ class FoodCompositeMgr: ObservableObject {
 
     private var storageKey: String { "foodComposite.\(profileId)" }
 
+    // Persistence codec. Built per use because storageKey re-points
+    // when the profile switches. On decode failure the store backs up
+    // the blob under "<key>.corrupt" and loudly logs before we reseed.
+    private var store: UserDefaultsStore<[FoodComposite]> {
+        UserDefaultsStore(key: storageKey)
+    }
+
     func serialize() {
-        if let data = try? JSONEncoder().encode(composites) {
-            UserDefaults.standard.set(data, forKey: storageKey)
-        }
+        store.save(composites)
     }
 
     func deserialize() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
-           let saved = try? JSONDecoder().decode([FoodComposite].self, from: data) {
+        if let saved = store.load() {
             self.composites = saved
             return
         }
@@ -351,13 +346,10 @@ class FoodCompositeMgr: ObservableObject {
         if !UserDefaults.standard.bool(forKey: migratedFlagKey) {
             UserDefaults.standard.set(true, forKey: migratedFlagKey)
             if !UserDefaults.standard.bool(forKey: legacyConsumedKey),
-               let legacyData = UserDefaults.standard.data(forKey: "foodComposite"),
-               let legacy = try? JSONDecoder().decode([FoodComposite].self, from: legacyData) {
+               let legacy = UserDefaultsStore<[FoodComposite]>(key: "foodComposite").load() {
                 self.composites = legacy
                 UserDefaults.standard.set(true, forKey: legacyConsumedKey)
-                if let data = try? JSONEncoder().encode(legacy) {
-                    UserDefaults.standard.set(data, forKey: storageKey)
-                }
+                store.save(legacy)
                 return
             }
         }

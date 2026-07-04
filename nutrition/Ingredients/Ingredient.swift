@@ -24,11 +24,12 @@ enum IngredientType: String, Codable, CaseIterable, Identifiable {
 class IngredientMgr: ObservableObject {
 
 
-    @Published var ingredients: [Ingredient] = [] {
-        didSet {
-            serialize()
-        }
-    }
+    // Config-owned: ingredients reload from nutrition-config on every
+    // launch. Runtime edits (Edit / Verify with AI) are deliberately
+    // session-scoped — there is NO UserDefaults persistence here, and
+    // the edit screens say so. A proper export-to-config flow is
+    // future work (nutrition.md P3.4).
+    @Published var ingredients: [Ingredient] = []
 
 
     init() {
@@ -40,25 +41,6 @@ class IngredientMgr: ObservableObject {
             print("IngredientMgr: FAILED to load ingredients from config: \(error)")
             self.ingredients = []
         }
-    }
-
-
-    func serialize() {
-        if let encodedData = try? JSONEncoder().encode(ingredients) {
-            UserDefaults.standard.set(encodedData, forKey: "ingredient")
-        }
-    }
-
-
-    func deserialize() {
-        guard
-          let data = UserDefaults.standard.data(forKey: "ingredient"),
-          let savedItems = try? JSONDecoder().decode([Ingredient].self, from: data)
-        else {
-            return
-        }
-
-        self.ingredients = savedItems
     }
 
 

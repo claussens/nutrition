@@ -88,6 +88,7 @@ struct VerifyAllWalkthrough: View {
 
     private var reviewView: some View {
         Form {
+            SessionScopedEditsNote()
             Section {
                 HStack {
                     Text(currentName ?? "").font(.headline)

@@ -22,12 +22,12 @@ class ProfileMgr: ObservableObject {
 
 
     // The active profile, as a COMPUTED view over the single source of
-    // truth (`profiles` + `activeProfileId`). Existing call sites
-    // continue to read `profileMgr.profile.X` and bind
-    // `$profileMgr.profile.X` — unchanged. Reads return the active
+    // truth (`profiles` + `activeProfileId`). Reads return the active
     // element; writes splice the new value back into `profiles[i]`
-    // (which persists via profiles' own didSet). A Binding into this
-    // computed property is fine in SwiftUI because it has a setter.
+    // (which persists via profiles' own didSet). Edit screens bind to
+    // a local @State draft and assign `profile = draft` only on Save —
+    // every write through this setter hits disk, so nothing should
+    // write here per-keystroke.
     var profile: Profile {
         get {
             if let p = profiles.first(where: { $0.id == activeProfileId }) {
@@ -64,8 +64,7 @@ class ProfileMgr: ObservableObject {
         }
         // 2. Migrate from the old single-profile schema (key "profile").
         // The custom Profile.init(from:) handles the missing id/name.
-        else if let data = UserDefaults.standard.data(forKey: "profile"),
-                var migrated = try? JSONDecoder().decode(Profile.self, from: data) {
+        else if var migrated = UserDefaultsStore<Profile>(key: "profile").load() {
             if migrated.id.isEmpty { migrated.id = UUID().uuidString }
             if migrated.name.isEmpty { migrated.name = "Shane" }
             self.profiles = [migrated]
@@ -172,27 +171,19 @@ class ProfileMgr: ObservableObject {
     }
 
 
+    // Persistence codec. On decode failure the store backs up the
+    // blob under "profiles.corrupt" and loudly logs before init()
+    // falls back to migration / the default seed.
+    private static let store = UserDefaultsStore<[Profile]>(key: "profiles")
+
+
     private static func loadProfiles() -> [Profile]? {
-        guard let data = UserDefaults.standard.data(forKey: "profiles") else { return nil }
-        return try? JSONDecoder().decode([Profile].self, from: data)
+        store.load()
     }
 
 
     private func saveProfiles() {
-        if let json = try? JSONEncoder().encode(profiles) {
-            UserDefaults.standard.set(json, forKey: "profiles")
-        }
-    }
-
-
-    // Revert in-flight edits — used by ProfileEdit's Cancel button.
-    // Reloads the last-persisted profiles and re-points the active id.
-    func cancel() {
-        if let arr = Self.loadProfiles(), !arr.isEmpty {
-            self.profiles = arr
-            let activeId = UserDefaults.standard.string(forKey: "activeProfileId")
-            self.activeProfileId = arr.first(where: { $0.id == activeId })?.id ?? arr[0].id
-        }
+        Self.store.save(profiles)
     }
 
 
@@ -205,10 +196,10 @@ class ProfileMgr: ObservableObject {
     var onProfileSwitch: ((Profile) -> Void)?
 
 
-    // Switch the active profile by id. With `profile` now a computed
-    // view over `profiles` + `activeProfileId`, in-flight edits already
-    // live in `profiles`, so switching is just re-pointing the active id
-    // (which persists via its didSet) + notifying per-profile managers.
+    // Switch the active profile by id: re-point the active id (which
+    // persists via its didSet) + notify the per-profile managers.
+    // In-flight edit-screen drafts are the view's problem — ProfileEdit
+    // re-snapshots its draft when the active id changes.
     func switchToProfile(_ id: String) {
         guard let next = profiles.first(where: { $0.id == id }) else { return }
         self.activeProfileId = id
@@ -466,8 +457,8 @@ struct Profile: Codable, Identifiable, Equatable {
     // snapshot. These thin accessors delegate to ProfileMetrics(self)
     // so existing call sites (profile.bmi, profile.proteinGoal, …) keep
     // working unchanged. The no-op setters are retained because several
-    // ProfileEdit rows bind `$profileMgr.profile.X` even for read-only
-    // derived values; the binding requires a settable property.
+    // ProfileEdit rows bind `$draft.X` even for read-only derived
+    // values; the binding requires a settable property.
     // ---------------------------------------------------------------
 
     var age: Double {

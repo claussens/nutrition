@@ -41,6 +41,31 @@ extension View {
 
 
 // ============================================================
+// Shared "session-scoped edits" note. Ingredients are config-
+// owned: they reload from nutrition-config on every launch, so
+// runtime edits (including paid Verify-with-AI corrections) do
+// NOT survive a relaunch. Shown on the Edit and Verify screens
+// so nobody is surprised. An export-to-config flow is future
+// work (nutrition.md P3.4).
+// ============================================================
+struct SessionScopedEditsNote: View {
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 4) {
+                Label("Edits last until relaunch", systemImage: "info.circle")
+                  .font(.callout)
+                  .foregroundColor(Color.theme.blueYellow)
+                Text("Ingredient data reloads from nutrition-config at launch. To keep changes, update nutrition-config.")
+                  .font(.caption)
+                  .foregroundColor(Color.theme.blackWhiteSecondary)
+            }
+              .padding(.vertical, 4)
+        }
+    }
+}
+
+
+// ============================================================
 // Shared "Low-confidence fields" banner. Byte-identical copies
 // previously lived in both IngredientAdd and IngredientEdit.
 // ============================================================
@@ -146,6 +171,7 @@ struct IngredientEdit: View {
 
     var body: some View {
         Form {
+            SessionScopedEditsNote()
             if let diff = diff, !diff.isEmpty {
                 diffBanner(diff)
             }

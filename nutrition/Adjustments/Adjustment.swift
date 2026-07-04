@@ -8,6 +8,13 @@ class AdjustmentMgr: ObservableObject {
 
     private var storageKey: String { "adjustment.\(profileId)" }
 
+    // Persistence codec. Built per use because storageKey re-points
+    // when the profile switches. On decode failure the store backs up
+    // the blob under "<key>.corrupt" and loudly logs before we reseed.
+    private var store: UserDefaultsStore<[Adjustment]> {
+        UserDefaultsStore(key: storageKey)
+    }
+
 
     @Published var adjustments: [Adjustment] = [] {
         didSet {
@@ -44,8 +51,7 @@ class AdjustmentMgr: ObservableObject {
     //      persist forward under the per-profile key.
     //   3. If still empty, apply the original default seeds.
     private func loadForCurrentProfile() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
-           let savedItems = try? JSONDecoder().decode([Adjustment].self, from: data) {
+        if let savedItems = store.load() {
             self.adjustments = savedItems
             return
         }
@@ -58,8 +64,7 @@ class AdjustmentMgr: ObservableObject {
             // the legacy unkeyed data; later profiles fall through to
             // the default seed below.
             if !UserDefaults.standard.bool(forKey: legacyConsumedKey),
-               let legacyData = UserDefaults.standard.data(forKey: "adjustment"),
-               let legacyItems = try? JSONDecoder().decode([Adjustment].self, from: legacyData) {
+               let legacyItems = UserDefaultsStore<[Adjustment]>(key: "adjustment").load() {
                 self.adjustments = legacyItems   // didSet -> serialize() writes to storageKey
                 UserDefaults.standard.set(true, forKey: legacyConsumedKey)
                 return
@@ -88,21 +93,7 @@ class AdjustmentMgr: ObservableObject {
 
 
     func serialize() {
-        if let encodedData = try? JSONEncoder().encode(adjustments) {
-            UserDefaults.standard.set(encodedData, forKey: storageKey)
-        }
-    }
-
-
-    func deserialize() {
-        guard
-          let data = UserDefaults.standard.data(forKey: storageKey),
-          let savedItems = try? JSONDecoder().decode([Adjustment].self, from: data)
-        else {
-            return
-        }
-
-        self.adjustments = savedItems
+        store.save(adjustments)
     }
 
 
