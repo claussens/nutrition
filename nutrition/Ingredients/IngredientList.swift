@@ -237,7 +237,7 @@ struct IngredientList: View {
                   // screen). Scanner Settings moved to Profile.
                   HStack(spacing: 22) {
                       NavigationLink(destination: AdjustmentList()) {
-                          Image(systemName: "slider.horizontal.below.list.bulleted")
+                          Image(systemName: "slider.horizontal.3")
                       }
 
                       Menu {
