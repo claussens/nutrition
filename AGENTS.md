@@ -18,6 +18,110 @@ The app helps users track meals, ingredients, nutritional values, and vitamin/mi
 - **Run on Simulator**: Open in Xcode and use Cmd+R to run
 - **Clean Build**: Product → Clean Build Folder in Xcode
 
+## Install to Shane's iPhone (physical device)
+
+To put the app on Shane's actual phone — the **iPhone 17 Pro Max**, UDID
+`00008150-001935463E90C01C`, iOS 26.5.2, connected via USB + unlocked — use the
+on-device recipe below. Adapted from the proven swish/MiVista recipe
+(`~/src/swish/swish/AGENTS.md`, `~/src/mivista/mivista/AGENTS.md`). Confirm the
+device is reachable first: `ideviceinfo -u 00008150-001935463E90C01C -k
+ProductVersion` should print a version (uses `ideviceinstaller` /
+`libimobiledevice`, at `/opt/homebrew/bin`).
+
+### Why `ideviceinstaller` and not Xcode / `devicectl`
+
+Xcode is **16.2**; the phone runs **iOS 26.5.2**. Xcode 16.2 has no developer
+disk image variant that new, so any attempt to Run/attach from Xcode (or use
+`xcodebuild -destination 'platform=iOS,id=…'`, or `devicectl`) fails with:
+
+```
+Waiting to reconnect to Shane's IPhone
+Previous preparation error: The developer disk image could not be mounted on this device.
+Error mounting image: 0xe800010f (kAMDMobileImageMounterPersonalizedBundleMissingVariantError)
+```
+and `xcrun devicectl list devices` shows the phone as `connected (no DDI)`.
+
+**This is expected and does not block anything below.** The DDI is only needed
+for on-device *debugging*. Installing a signed Release build over
+`ideviceinstaller` (libimobiledevice) needs no DDI — which is exactly why swish,
+MiVista, and this recipe all use it. Dismiss the Xcode dialog with Cancel.
+Building with `-destination 'generic/platform=iOS'` (as below) also sidesteps it;
+targeting the device by id does not, and will fail with "Device is busy".
+
+### Signing prerequisite (nutrition-specific — swish/MiVista don't hit this)
+
+Nutrition's `nutrition.entitlements` declares **HealthKit**, so it can NOT sign
+with the team's wildcard profile (`iOS Team Provisioning Profile: *`, which is
+what swish signs with). It requires the app-specific
+`iOS Team Provisioning Profile: com.sclaussen.nutrition`, cached at
+`~/Library/Developer/Xcode/UserData/Provisioning Profiles/`.
+
+That profile must contain the phone's UDID. If it doesn't, the build succeeds
+and codesigns fine but the **install** fails with:
+
+```
+ERROR: Install failed. Got error "ApplicationVerificationFailed" with code
+0xe8008015 (A valid provisioning profile for this executable was not found.)
+```
+
+Check before building:
+
+```sh
+security cms -D -i ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/*.mobileprovision \
+  | grep -q 00008150-001935463E90C01C
+```
+
+Regenerating it requires a signed-in Apple ID in **Xcode → Settings → Accounts**.
+`xcodebuild -allowProvisioningUpdates` alone fails with `error: No Accounts: Add
+a new account in Accounts settings` when no account is present — and deleting the
+stale profile in that state makes things worse (the build falls back to the
+wildcard profile and errors on the missing HealthKit entitlement). Ask Shane to
+sign in and open the project once with the phone connected; don't strip the
+HealthKit entitlement to work around it.
+
+Run these **one at a time, to completion**:
+
+```sh
+cd /Users/shane/src/nutrition/nutrition
+
+# 1. Build Release for a generic device (~2–5 min). Release is NOT optional —
+#    the scheme's Run config is Debug/-Onone and noticeably slower on-device.
+xcodebuild -scheme nutrition -configuration Release \
+  -destination 'generic/platform=iOS' \
+  -derivedDataPath build/DD -allowProvisioningUpdates build
+
+# 2. Package the .ipa (fast). App product is Nutrition.app (capital N — the
+#    scheme/target is lowercase `nutrition`), bundle com.sclaussen.nutrition.
+rm -rf build/ipa && mkdir -p build/ipa/Payload
+cp -R build/DD/Build/Products/Release-iphoneos/Nutrition.app build/ipa/Payload/
+(cd build/ipa && zip -qry Nutrition.ipa Payload)
+
+# 3. Install (~60–90 s) — LET IT FINISH. "Install: Complete" = success.
+script -q /dev/null ideviceinstaller -u 00008150-001935463E90C01C \
+  install build/ipa/Nutrition.ipa
+```
+
+### NEVER kill or time-out the install — this is the #1 repeated failure
+
+The install takes **~60–90 seconds**, most of it the device-side
+`Installing 'com.sclaussen.nutrition' → GeneratingApplicationMap (90%) → InstallComplete`
+phase, which prints **no progress for most of a minute**. **This is normal, not a
+hang.** Killing it (a short tool timeout, a manual `kill`, a "detect the hang"
+guard) leaves the phone's `installation_proxy` transaction half-open — then
+*every* retry hangs at `Installing …`, so it looks broken and you kill again.
+Do not enter that death-spiral.
+
+**So run the install so it CANNOT be killed early:**
+- Run it in the **background** (or a foreground tool call with a timeout **≥ 360000 ms**),
+  then **poll** the output for `Install: Complete`. Wait for it. Do not guess it's
+  hung before ~3 minutes.
+- **One install at a time**, and **never** concurrently with a Release build or a
+  sim run — USB + CPU contention is what makes it *actually* slow.
+- Only if an install is genuinely stuck (a *prior* kill wedged it): `pkill -f
+  ideviceinstaller`, wait ~5 s, then retry **once and let it run uninterrupted**.
+  Reboot the phone only as a last resort. `ideviceinfo -u 00008150… -k
+  ProductVersion` returning a value confirms the device itself is fine.
+
 ## Architecture Overview
 
 ### iOS App Structure (SwiftUI + MVVM Pattern)
