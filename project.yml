@@ -1,0 +1,142 @@
+name: nutrition
+
+options:
+  bundleIdPrefix: com.claussen
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  # ConfigStore/ConfigSync parse the five bundled YAML sections.
+  Yams:
+    url: https://github.com/jpsim/Yams.git
+    from: 5.0.0
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    GENERATE_INFOPLIST_FILE: YES
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: "1.0"
+    CODE_SIGN_STYLE: Automatic
+    # Baked in so `xcodegen generate` never drops the team and device
+    # builds stop demanding one. Same value as swish/future.
+    DEVELOPMENT_TEAM: QATUG526J8
+
+targets:
+  nutrition:
+    type: application
+    platform: iOS
+    sources:
+      - path: nutrition
+        excludes:
+          - "**/.DS_Store"
+          - "README.md"
+    dependencies:
+      - package: Yams
+    settings:
+      base:
+        # Renamed from com.sclaussen.nutrition before the first App Store
+        # Connect registration, onto the com.claussen prefix now shared by
+        # every app on the team (swish, mivista, nutrition, future), which
+        # replaced a three-way split between com.claussen, com.shane and
+        # com.sclaussen. NOTE: com.sclaussen.nutrition IS already registered
+        # on the developer portal from ordinary development — it is now an
+        # orphan, and com.claussen.nutrition must be registered in its place,
+        # WITH the HealthKit capability (see CODE_SIGN_ENTITLEMENTS below).
+        PRODUCT_BUNDLE_IDENTIFIER: com.claussen.nutrition
+        # Target is lowercase "nutrition"; the shipped app is "Nutrition".
+        PRODUCT_NAME: Nutrition
+        # Declared so App Store Connect stops halting every upload to ask.
+        # Standard HTTPS only, which is exempt from the export-compliance
+        # rules; answering here gives once what the dialog asks every time.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        # HealthKit entitlement (com.apple.developer.healthkit). This is also
+        # why com.sclaussen.nutrition had to be an EXPLICIT App ID from the
+        # start: a wildcard App ID cannot carry an entitlement, so Xcode
+        # registered one during development. Swish and MiVista, which request
+        # nothing, rode the XC Wildcard instead — and that is precisely why
+        # they need IDs created before they can ship.
+        CODE_SIGN_ENTITLEMENTS: nutrition/nutrition.entitlements
+        ENABLE_PREVIEWS: YES
+        # Assets.xcassets was MOVED OUT of "Preview Content" on 2026-07-27
+        # (it had been left there to make the XcodeGen conversion byte-match
+        # the old project). It could not stay: this setting marks that folder
+        # as development-only, and development assets survive a Release BUILD
+        # but are STRIPPED FROM AN ARCHIVE — which is the thing TestFlight
+        # uploads. Proven both ways on the same commit: the Release build's
+        # .app carried a 2.4 MB Assets.car and the AppIcon PNGs, the Release
+        # ARCHIVE's .app carried neither and had no CFBundleIcons at all. An
+        # iconless build is an automatic App Store Connect rejection.
+        #
+        # "Preview Content" now holds only "Preview Assets.xcassets", which is
+        # what it was always meant to hold and is genuinely fine to strip.
+        DEVELOPMENT_ASSET_PATHS: "\"nutrition/Preview Content\""
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SWIFT_EMIT_LOC_STRINGS: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        # Label-scanning flow: camera capture and photo-library pick.
+        INFOPLIST_KEY_NSCameraUsageDescription: "Take photos of nutrition labels to add or update ingredients."
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Pick existing photos of nutrition labels to add or update ingredients."
+        # HealthStore.swift reads/writes workout data.
+        INFOPLIST_KEY_NSHealthShareUsageDescription: "Your workout related data will be used to display your saved workouts in MyWorkouts."
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Workouts tracked by MyWorkouts on Apple Watch will be saved to HealthKit."
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/Frameworks"
+      # Signing identity. Deliberately "Apple Development" in BOTH
+      # configurations, including Release — this is NOT an oversight and must
+      # not be "corrected" to Apple Distribution.
+      #
+      # With CODE_SIGN_STYLE: Automatic, Xcode signs the ARCHIVE for
+      # development and `xcodebuild -exportArchive` RE-SIGNS the .ipa with the
+      # distribution certificate, driven by `method: app-store-connect` in
+      # scripts/ExportOptions.plist. Pinning Apple Distribution here
+      # contradicts automatic signing and the archive fails outright with
+      # "conflicting provisioning settings ... a conflicting code signing
+      # identity Apple Distribution has been manually specified" — proven on
+      # 2026-07-27, when exactly that change broke all four apps at once.
+      #
+      # Stated on the TARGET because XcodeGen's iOS preset writes its own
+      # target-level identity ("iPhone Developer", the legacy spelling) that a
+      # project-level line would lose to. This just makes the value explicit
+      # and modern rather than generator-supplied.
+      configs:
+        Debug:
+          CODE_SIGN_IDENTITY: "Apple Development"
+        Release:
+          CODE_SIGN_IDENTITY: "Apple Development"
+
+  nutritionTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: nutritionTests
+        excludes:
+          - "**/.DS_Store"
+    dependencies:
+      - target: nutrition
+      - package: Yams
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.claussen.nutritionTests
+        PRODUCT_NAME: "$(TARGET_NAME)"
+        SWIFT_EMIT_LOC_STRINGS: NO
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Nutrition.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Nutrition"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  nutrition:
+    build:
+      targets:
+        nutrition: all
+        nutritionTests: [test]
+    test:
+      targets: [nutritionTests]

@@ -25,7 +25,7 @@ set -euo pipefail
 
 # ── Per-app identity (the ONLY lines that differ between apps) ────────────────
 DEVICE="${SIM_DEVICE:-iPhone 16 Pro Max}"
-APP_ID="com.sclaussen.nutrition"
+APP_ID="com.claussen.nutrition"
 SCHEME="nutrition"
 PROJECT="nutrition.xcodeproj"
 APP_NAME="Nutrition.app"

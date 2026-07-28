@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- app-store-connect is the method that produces a TestFlight-eligible
+	     build. (It was spelled "app-store" before Xcode 15; the old name still
+	     works but warns.) -->
+	<key>method</key>
+	<string>app-store-connect</string>
+
+	<!-- Hand the export straight to App Store Connect instead of leaving a
+	     .ipa on disk for a second tool to upload. `--no-upload` swaps this
+	     for "export" via the script. -->
+	<key>destination</key>
+	<string>upload</string>
+
+	<key>teamID</key>
+	<string>QATUG526J8</string>
+
+	<!-- Let Xcode create/refresh the distribution profile as needed, matching
+	     CODE_SIGN_STYLE: Automatic in project.yml. -->
+	<key>signingStyle</key>
+	<string>automatic</string>
+
+	<!-- Upload the dSYMs so TestFlight crash reports come back symbolicated —
+	     without them a crash is a stack of hex addresses. -->
+	<key>uploadSymbols</key>
+	<true/>
+
+	<!-- Xcode's bitcode stripping is long dead (removed in Xcode 14); stating
+	     false keeps the export from warning about it. -->
+	<key>stripSwiftSymbols</key>
+	<true/>
+</dict>
+</plist>

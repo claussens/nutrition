@@ -10,11 +10,11 @@ import Security
 // and never lands in iCloud Backup as plain text.
 //
 // We use one account string per credential (`anthropic-api-key`,
-// `github-pat`) under one service (`com.sclaussen.nutrition`). If we ever
+// `github-pat`) under one service (`com.claussen.nutrition`). If we ever
 // add another key (OpenAI, etc.) we just add another `account` string.
 enum KeychainStore {
 
-    private static let service = "com.sclaussen.nutrition"
+    private static let service = "com.claussen.nutrition"
     private static let anthropicAccount = "anthropic-api-key"
     private static let githubAccount = "github-pat"
 

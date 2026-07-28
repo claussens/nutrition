@@ -53,7 +53,7 @@ targeting the device by id does not, and will fail with "Device is busy".
 Nutrition's `nutrition.entitlements` declares **HealthKit**, so it can NOT sign
 with the team's wildcard profile (`iOS Team Provisioning Profile: *`, which is
 what swish signs with). It requires the app-specific
-`iOS Team Provisioning Profile: com.sclaussen.nutrition`, cached at
+`iOS Team Provisioning Profile: com.claussen.nutrition`, cached at
 `~/Library/Developer/Xcode/UserData/Provisioning Profiles/`.
 
 That profile must contain the phone's UDID. If it doesn't, the build succeeds
@@ -91,7 +91,7 @@ xcodebuild -scheme nutrition -configuration Release \
   -derivedDataPath build/DD -allowProvisioningUpdates build
 
 # 2. Package the .ipa (fast). App product is Nutrition.app (capital N — the
-#    scheme/target is lowercase `nutrition`), bundle com.sclaussen.nutrition.
+#    scheme/target is lowercase `nutrition`), bundle com.claussen.nutrition.
 rm -rf build/ipa && mkdir -p build/ipa/Payload
 cp -R build/DD/Build/Products/Release-iphoneos/Nutrition.app build/ipa/Payload/
 (cd build/ipa && zip -qry Nutrition.ipa Payload)
@@ -104,7 +104,7 @@ script -q /dev/null ideviceinstaller -u 00008150-001935463E90C01C \
 ### NEVER kill or time-out the install — this is the #1 repeated failure
 
 The install takes **~60–90 seconds**, most of it the device-side
-`Installing 'com.sclaussen.nutrition' → GeneratingApplicationMap (90%) → InstallComplete`
+`Installing 'com.claussen.nutrition' → GeneratingApplicationMap (90%) → InstallComplete`
 phase, which prints **no progress for most of a minute**. **This is normal, not a
 hang.** Killing it (a short tool timeout, a manual `kill`, a "detect the hang"
 guard) leaves the phone's `installation_proxy` transaction half-open — then
