@@ -19,7 +19,18 @@ settings:
     TARGETED_DEVICE_FAMILY: "1,2"
     GENERATE_INFOPLIST_FILE: YES
     CURRENT_PROJECT_VERSION: 1
-    MARKETING_VERSION: "1.0"
+    # 1.0.0 across every app (2026-07-28). Three components, not "1.0", so the
+    # marketing version App Store Connect shows matches what the app record
+    # says and there is one version train per app rather than two.
+    #
+    # This is CFBundleShortVersionString. The BUILD number beside it
+    # (CURRENT_PROJECT_VERSION / CFBundleVersion) is passed by
+    # scripts/testflight.sh as the commit count on HEAD — TestFlight renders
+    # the pair as "1.0.0 (245)", which is the per-build differentiation.
+    # A combined string like "1.0.0-245" is NOT a legal CFBundleVersion:
+    # Apple requires at most three period-separated integers and rejects
+    # anything with a hyphen at upload.
+    MARKETING_VERSION: "1.0.0"
     CODE_SIGN_STYLE: Automatic
     # Baked in so `xcodegen generate` never drops the team and device
     # builds stop demanding one. Same value as swish/future.
