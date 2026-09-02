@@ -2,7 +2,8 @@ TAGS
 .#*
 build/
 
-.claude/
+.claude/*
+!.claude/settings.json
 
 scripts/.venv/
 scripts/wf_refresh_out.json

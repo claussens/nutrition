@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "claude-base@claussens": true,
+    "nutrition@claussens": true
+  },
+  "disableClaudeAiConnectors": true
+}
