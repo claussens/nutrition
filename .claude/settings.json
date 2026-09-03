@@ -1,7 +1,8 @@
 {
   "enabledPlugins": {
     "claude-base@claussens": true,
-    "nutrition@claussens": true
+    "nutrition@claussens": true,
+    "swift-lsp@claude-plugins-official": true
   },
   "disableClaudeAiConnectors": true
 }
