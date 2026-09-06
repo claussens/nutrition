@@ -742,7 +742,8 @@ struct ProfileMetrics {
     }
 
     var bodyMassIndex: Double {
-        (self.bodyMass / Double(self.height * self.height)) * 703
+        guard self.height > 0 else { return 0 }
+        return (self.bodyMass / Double(self.height * self.height)) * 703
     }
 
     var fatMass: Double {

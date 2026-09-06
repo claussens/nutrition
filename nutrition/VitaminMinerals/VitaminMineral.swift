@@ -50,7 +50,9 @@ struct VitaminMineral: Codable, Identifiable {
         // NIH bands use whole-year ceilings (e.g. 14–18), so compare
         // the whole-year age: a continuous 18.5 must still land in the
         // 14–18 band, not fall through to the next one a year early.
-        for row in thresholds where floor(age) <= row.maxAge {
+        // The infant rows (max-age 0.5 and 1) are sub-year bands, so
+        // they compare the fractional age instead.
+        for row in thresholds where (row.maxAge < 1 ? age : floor(age)) <= row.maxAge {
             return gender == Gender.male ? row.male : row.female
         }
         return 0

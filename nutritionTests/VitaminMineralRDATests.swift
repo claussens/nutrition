@@ -57,6 +57,15 @@ final class VitaminMineralRDATests: XCTestCase {
         XCTAssertEqual(calcium(age: 84, gender: .male).max(), 2000)
     }
 
+    func testInfantBandsUseFractionalAge() {
+        // The 0–6 month (max-age 0.5) and 7–12 month (max-age 1) rows
+        // are sub-year bands, so flooring the age would send every
+        // infant to the first row. Calcium: 200 then 260.
+        XCTAssertEqual(calcium(age: 0.25).min(), 200)
+        XCTAssertEqual(calcium(age: 0.75).min(), 260)
+        XCTAssertEqual(calcium(age: 0.75).max(), 1500)
+    }
+
     func testUnitMapping() {
         XCTAssertEqual(VitaminMineral(name: .calcium, age: 40, gender: .male).unit(), .milligram)
         XCTAssertEqual(VitaminMineral(name: .copper, age: 40, gender: .male).unit(), .microgram)

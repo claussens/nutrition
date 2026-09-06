@@ -33,6 +33,30 @@ final class ProfileMetricsTests: XCTestCase {
         XCTAssertEqual(p.caloriesGoal, (resting + 600) * 0.8, accuracy: 0.01)
     }
 
+    // ---- Body composition ----
+
+    func testBodyMassIndexIsImperialFormula() {
+        // BMI = lb / in² × 703: 220 / 5184 × 703.
+        let p = Fixtures.ketoProfile(bodyMass: 220, gender: .male, ageYears: 40)
+        XCTAssertEqual(p.bodyMassIndex, 220.0 / 5184.0 * 703.0, accuracy: 0.0001)
+    }
+
+    func testBodyMassIndexIsZeroWithoutHeight() {
+        // The placeholder profile has height 0; BMI must not be inf.
+        var p = Fixtures.ketoProfile(bodyMass: 220, gender: .male, ageYears: 40)
+        p.height = 0
+        XCTAssertEqual(p.bodyMassIndex, 0)
+    }
+
+    func testLeanBodyMassAndWater() {
+        var p = Fixtures.ketoProfile(bodyMass: 200, gender: .male, ageYears: 40)
+        p.bodyFatPercentage = 15
+        XCTAssertEqual(p.fatMass, 30, accuracy: 0.0001)
+        XCTAssertEqual(p.leanBodyMass, 170, accuracy: 0.0001)
+        // Half the body weight in fluid ounces, as liters.
+        XCTAssertEqual(p.waterLiters, 100 * 0.029574, accuracy: 0.0001)
+    }
+
     // ---- Schofield (age-banded) BMR ----
 
     func testDefaultEquationIsMifflin() {

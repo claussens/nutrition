@@ -26,13 +26,12 @@ struct Food: Codable, Identifiable, Equatable {
     var defaultAmount: Double
     var stepAmount: Double
     // The consumption unit (tablespoon / egg / can / gram …) and the
-    // grams that one such unit weighs. Unlike defaultAmount these are
-    // ALWAYS authoritative on the Food: every member ingredient of
-    // the Food is prepped/consumed in the same unit, so there is no
-    // "0 = none" sentinel. Member ingredients still carry their own
-    // stored consumptionUnit/consumptionGrams (raw value edited on
-    // the ingredient form), but meal math reads the Food's value via
-    // FoodMgr.consumptionUnit(for:) / .consumptionGrams(for:).
+    // grams that one such unit weighs. The unit is authoritative on
+    // the Food: every member ingredient is prepped/consumed in the
+    // same unit. The grams are the Food's default; for a counted unit
+    // a member whose own consumptionGrams is in that unit overrides
+    // it, because a piece's mass is the variant's (see
+    // FoodMgr.consumptionGrams(for:)).
     var consumptionUnit: Unit
     var consumptionGrams: Double
     var currentIngredientName: String
@@ -164,8 +163,18 @@ class FoodMgr: ObservableObject {
         return .gram
     }
 
+    // Grams per unit. A counted unit's mass (piece, slice, can, ...)
+    // belongs to the variant — a 214 g wrap and a 120 g sandwich
+    // share one Food — so the ingredient's own value wins when it is
+    // in the Food's counted unit. A gram-unit Food is always the
+    // Food's value; a variant authored in a different unit, or with
+    // no value, uses the Food's.
     func consumptionGrams(for i: Ingredient) -> Double {
-        getByName(name: i.foodName)?.consumptionGrams ?? i.consumptionGrams
+        guard let f = getByName(name: i.foodName) else { return i.consumptionGrams }
+        if f.consumptionUnit != .gram, i.consumptionUnit == f.consumptionUnit, i.consumptionGrams > 0 {
+            return i.consumptionGrams
+        }
+        return f.consumptionGrams
     }
 
 
