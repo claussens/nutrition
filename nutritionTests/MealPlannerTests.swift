@@ -263,6 +263,65 @@ final class MealPlannerTests: XCTestCase {
     }
 
     // ------------------------------------------------------------
+    // Termination: a rule that can never bind must be rejected
+    // ------------------------------------------------------------
+
+    // Runs generateMeal off the test thread so a non-terminating
+    // solver shows up as a timed-out expectation instead of a hung
+    // test process.
+    private func generateWithTimeout(_ env: SolverEnv, file: StaticString = #filePath, line: UInt = #line) {
+        let done = expectation(description: "generateMeal terminates")
+        DispatchQueue.global().async {
+            env.generate()
+            done.fulfill()
+        }
+        wait(for: [done], timeout: 5)
+    }
+
+    func testZeroMacroRuleWithoutMaximumIsRejected() {
+        // Water-like ingredient: no fat / netCarbs / protein, so no
+        // macro limit can ever bind, and no maximum either. Before
+        // the guard this looped forever, adding 1 unit per pass.
+        let env = SolverEnv(
+            ingredients: [Fixtures.ingredient(name: "Water A", food: "Water")],
+            foods: [Fixtures.food("Water", current: "Water A")],
+            adjustments: [Adjustment(name: "Water", amount: 1)])
+        env.mealIngredientMgr.create(name: "Water", amount: 2)
+        generateWithTimeout(env)
+
+        XCTAssertEqual(env.row("Water")!.amount, 2)
+        XCTAssertEqual(env.row("Water")!.adjustment, Constants.Default)
+    }
+
+    func testZeroAmountRuleIsRejected() {
+        // amount 0 adds nothing, so every fit check passes forever —
+        // with or without a maximum.
+        let env = SolverEnv(
+            ingredients: [Fixtures.ingredient(name: "Cheese A", food: "Cheese",
+                                              calories: 100, protein: 10)],
+            foods: [Fixtures.food("Cheese", current: "Cheese A")],
+            adjustments: [Adjustment(name: "Cheese", amount: 0, constraints: true, maximum: 5)])
+        env.mealIngredientMgr.create(name: "Cheese", amount: 2)
+        generateWithTimeout(env)
+
+        XCTAssertEqual(env.row("Cheese")!.amount, 2)
+        XCTAssertEqual(env.macrosMgr.macros.protein, 20, accuracy: 0.0001)
+    }
+
+    func testZeroMacroRuleWithMaximumStillGrowsToCap() {
+        // With a maximum the cap terminates the loop, so a zero-macro
+        // rule is still allowed to fill up to it.
+        let env = SolverEnv(
+            ingredients: [Fixtures.ingredient(name: "Water A", food: "Water")],
+            foods: [Fixtures.food("Water", current: "Water A")],
+            adjustments: [Adjustment(name: "Water", amount: 1, constraints: true, maximum: 4)])
+        env.mealIngredientMgr.create(name: "Water", amount: 2)
+        generateWithTimeout(env)
+
+        XCTAssertEqual(env.row("Water")!.amount, 4)
+    }
+
+    // ------------------------------------------------------------
     // Macro bookkeeping details
     // ------------------------------------------------------------
 

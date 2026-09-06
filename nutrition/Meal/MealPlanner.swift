@@ -162,6 +162,15 @@ struct MealPlanner {
         let mealIngredient = state.rows.first(where: { $0.name == adjustment.name })
 
 
+        // A rule that adds nothing (amount 0) or takes away
+        // (negative) never moves a macro toward its limit and never
+        // climbs past its maximum, so it would be accepted on every
+        // pass and generateMeal would spin forever.
+        if adjustment.amount <= 0 {
+            return false
+        }
+
+
         // Skip Manual / Done — both are explicit user signals to
         // leave the row alone (user controls the amount; auto stays
         // out).
@@ -213,6 +222,16 @@ struct MealPlanner {
         if state.macros.fatGoal < state.macros.fat + fat ||
              state.macros.netCarbsMaximum < state.macros.netCarbs + netCarbs ||
              state.macros.proteinGoal < state.macros.protein + protein {
+            return false
+        }
+
+
+        // Only the three macro limits and the rule's own maximum can
+        // ever stop the loop. An ingredient with no fat, net carbs or
+        // protein (water, most supplements) under a rule with no
+        // maximum satisfies every check forever — reject it so the
+        // generation terminates.
+        if !adjustment.constraints && fat == 0 && netCarbs == 0 && protein == 0 {
             return false
         }
 
