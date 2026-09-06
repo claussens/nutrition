@@ -74,6 +74,39 @@ final class CostMathTests: XCTestCase {
         XCTAssertEqual(i.costPerServing, 0)
     }
 
+    // ---- pill supplements in the bundled config ----
+    //
+    // AGENTS.md: for pills consumptionGrams is grams per pill, so
+    // totalGrams must be pillCount × consumptionGrams. A placeholder
+    // like totalGrams 1 prices every pill at a whole bottle.
+
+    func testBundledPillSupplementsPriceWholeBottles() throws {
+        let data = try ConfigStore.shared.bundledConfigData()
+        let foods = Dictionary(uniqueKeysWithValues: data.foods.map { ($0.name, $0) })
+        var checked = 0
+        for ci in data.ingredients {
+            guard let f = foods[ci.food], f.consumptionUnit == "pill",
+                  let grams = ci.price?.totalGrams else { continue }
+            let perPill = ci.consumptionGrams ?? f.consumptionGrams
+            let pills = grams / perPill
+            XCTAssertEqual(pills, pills.rounded(), accuracy: 0.0001,
+                           "\(ci.name): total-grams \(grams) is not a whole number of \(perPill) g pills")
+            XCTAssertGreaterThanOrEqual(pills, 30,
+                                        "\(ci.name): \(pills) pills per container looks like a placeholder")
+            checked += 1
+        }
+        XCTAssertGreaterThan(checked, 0)
+    }
+
+    func testVitaminD3PerPillCostFromBundledConfig() throws {
+        let data = try ConfigStore.shared.bundledConfigData()
+        let ings = try ConfigStore.shared.runtimeIngredients(from: data)
+        let d3 = try XCTUnwrap(ings.first { $0.name == "Vitamin D3 (1000 IU)" })
+        let food = try XCTUnwrap(data.foods.first { $0.name == d3.foodName })
+        // $11 for a 90-pill bottle of 1 g pills: 12.2 cents a pill.
+        XCTAssertEqual(d3.costPerGram * (1 * food.consumptionGrams), 11.0 / 90.0, accuracy: 0.000001)
+    }
+
     // ---- compositeCost ----
 
     func testCompositeCostSumsPricedParts() {
