@@ -54,7 +54,9 @@
 #
 #   mkdir -p ~/.appstoreconnect/private_keys
 #   mv ~/Downloads/AuthKey_XXXXXXXXXX.p8 ~/.appstoreconnect/private_keys/
-#   export ASC_KEY_ID=XXXXXXXXXX ASC_ISSUER_ID=aaaaaaaa-....
+#   # values live in 1Password — do not put them in ~/.env
+#   with-asc ./scripts/testflight.sh
+#   # or rely on this script's automatic `op run` re-exec
 #
 # One key covers every app on the team — shared with swish, mivista, future.
 
@@ -89,13 +91,23 @@ BUILD_NUMBER="${BUILD_NUMBER:-$(git rev-list --count HEAD)}"
 # the ARCHIVE step too. Proven 2026-07-27: without it, apps with entitlements
 # fail at archive ("profile ... doesn't include the HealthKit capability") and
 # apps without them fail at export ("No profiles for '<bundle id>' were found").
-# ~/.env is sourced from ~/.config/zsh/conf.d/90-secrets.zsh, which .zshrc
-# loads for INTERACTIVE shells only — deliberately, so App Store credentials
-# aren't ambient in every cron job on the machine. This script therefore cannot
-# assume they are set: run from CI, a hook, or an agent's non-interactive
-# shell, they won't be. Pick them up directly in that case.
-if [[ -z "${ASC_KEY_ID:-}" && -r "$HOME/.env" ]]; then
-  source "$HOME/.env"
+# ASC_KEY_ID / ASC_ISSUER_ID are not ambient in shells (on purpose). They live
+# in 1Password and are injected per-process via `op run` / `with-asc`. This
+# script re-execs itself under op when they are unset, so CI, hooks, and
+# non-interactive agent shells work the same as a desk run.
+# ASC lives in 1Password (Private / AI App Store Connect), not ~/.env.
+# If unset, re-exec under `op run` so a plain ./scripts/testflight.sh still works.
+# Or: with-asc ./scripts/testflight.sh
+if [[ -z "${ASC_KEY_ID:-}" || -z "${ASC_ISSUER_ID:-}" ]]; then
+  ASC_ENV="${ASC_ENV:-$HOME/.config/op/env/asc.env}"
+  if command -v op >/dev/null 2>&1 && [[ -r "$ASC_ENV" ]]; then
+    # Resolve $0 before any cd in this script could break a relative path.
+    _self="${BASH_SOURCE[0]:-$0}"
+    if [[ "${_self}" != /* ]]; then
+      _self="$(cd "$(dirname "${_self}")" && pwd)/$(basename "${_self}")"
+    fi
+    exec op run --env-file="$ASC_ENV" -- "$_self" "$@"
+  fi
 fi
 
 AUTH_ARGS=()
