@@ -33,48 +33,7 @@ struct MealList: View {
     @State private var entrySheetFor: MealIngredient? = nil
     @State private var vmListActive = false
 
-    // ============================================================
-    // LLM scanner state — mirrors IngredientList's wiring so the
-    // camera works identically from the Meal page. Capture sheet →
-    // ScanRoute → push prefilled Add/Edit (hidden NavigationLink) or
-    // present the ambiguous-match chooser.
-    // ============================================================
-    @State private var showCaptureSheet = false
     @State private var costDetailActive = false
-    @State private var scanAddPrefill: ParsedIngredient? = nil
-    @State private var scanEditBundle: ScanEditBundle? = nil
-    @State private var scanChooser: ScanChooserPayload? = nil
-
-    private var scanAddActive: Binding<Bool> {
-        Binding(get: { scanAddPrefill != nil },
-                set: { if !$0 { scanAddPrefill = nil } })
-    }
-    private var scanEditActive: Binding<Bool> {
-        Binding(get: { scanEditBundle != nil },
-                set: { if !$0 { scanEditBundle = nil } })
-    }
-
-    struct ScanEditBundle {
-        let existing: Ingredient
-        let parsed: ParsedIngredient
-        let diff: ScanDiff
-    }
-    struct ScanChooserPayload: Identifiable {
-        let parsed: ParsedIngredient
-        let candidates: [Ingredient]
-        var id: String { parsed.name }
-    }
-
-    private func applyScanRoute(_ route: ScanRoute) {
-        switch route {
-        case .new(let parsed):
-            scanAddPrefill = parsed
-        case .update(let existing, let parsed, let diff):
-            scanEditBundle = ScanEditBundle(existing: existing, parsed: parsed, diff: diff)
-        case .chooser(let parsed, let candidates):
-            scanChooser = ScanChooserPayload(parsed: parsed, candidates: candidates)
-        }
-    }
 
     // Use cases:
     // - Deactivate a meal ingredient because it's out that will be auto-adjusted
@@ -212,43 +171,6 @@ struct MealList: View {
                   }
               }
           }
-          // Scanner — capture sheet, ambiguous-match chooser, and
-          // hidden NavigationLinks that push prefilled Add/Edit.
-          // Mirrors IngredientList so behavior is identical from
-          // either page.
-          .sheet(isPresented: $showCaptureSheet) {
-              LabelCaptureSheet { route in
-                  applyScanRoute(route)
-              }
-                .environmentObject(ingredientMgr)
-          }
-          .sheet(item: $scanChooser) { payload in
-              MatchChooserSheet(parsed: payload.parsed,
-                                candidates: payload.candidates) { resolved in
-                  applyScanRoute(resolved)
-              }
-          }
-          .background(
-              Group {
-                  NavigationLink(
-                      destination: Group {
-                          if let p = scanAddPrefill { IngredientAdd(prefill: p) }
-                      },
-                      isActive: scanAddActive
-                  ) { EmptyView() }
-
-                  NavigationLink(
-                      destination: Group {
-                          if let b = scanEditBundle {
-                              IngredientEdit(ingredient: b.existing,
-                                             prefill: b.parsed,
-                                             diff: b.diff)
-                          }
-                      },
-                      isActive: scanEditActive
-                  ) { EmptyView() }
-              }
-          )
           .background(
               NavigationLink(
                   destination: Group {
@@ -412,11 +334,6 @@ struct MealList: View {
                 // Secondary actions relocated off the bar as labeled
                 // items, plus the config actions (token / refresh).
                 HamburgerMenu {
-                    Button {
-                        showCaptureSheet = true
-                    } label: {
-                        Label("Scan label", systemImage: "camera.viewfinder")
-                    }
                     Button {
                         showSupplements.toggle()
                     } label: {

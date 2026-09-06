@@ -3,8 +3,8 @@ import XCTest
 
 // ============================================================
 // Drift tests for NutrientCatalog — the single descriptor table
-// driving Ingredient Codable, the config kebab→camel bridge, the
-// scanner schema, ScanDiff, the V&M forms, and the RDA lookups.
+// driving Ingredient Codable, the config kebab→camel bridge, and
+// the RDA lookups.
 // Each test round-trips EVERY descriptor through one of those
 // surfaces, so a nutrient added to one place but not another
 // fails here instead of silently reading 0 at runtime.
@@ -80,49 +80,6 @@ final class NutrientCatalogTests: XCTestCase {
 
 
     // ------------------------------------------------------------
-    // Scanner + ScanDiff: JSON keyed by descriptor id (exactly what
-    // the tool schema makes the model produce) must decode onto
-    // ParsedIngredient's keypaths, show up as one Change per field
-    // in compute(), and land on the Ingredient via apply().
-    // ------------------------------------------------------------
-    func testScanDiffRoundTripsEveryScannableDescriptor() throws {
-        var input: [String: Any] = [
-            "match": ["kind": "new"],
-            "name": "RoundTrip",
-            "lowConfidenceFields": [String]()
-        ]
-        var expected: [String: Double] = [:]
-        for (i, d) in NutrientCatalog.scannable.enumerated() {
-            input[d.id] = Double(i + 1)
-            expected[d.id] = Double(i + 1)
-        }
-
-        let parsed = try JSONDecoder().decode(
-            ParsedIngredient.self,
-            from: JSONSerialization.data(withJSONObject: input))
-
-        // Schema id ↔ ParsedIngredient property agreement.
-        for d in NutrientCatalog.scannable {
-            XCTAssertEqual(parsed[keyPath: d.parsed!], expected[d.id],
-                           "schema id '\(d.id)' didn't decode onto ParsedIngredient")
-        }
-
-        // compute() emits exactly one Change per scannable nutrient
-        // (identity fields match; serving/price fields are nil).
-        var ingredient = Fixtures.ingredient(name: "RoundTrip", food: "")
-        let diff = ScanDiff.compute(existing: ingredient, parsed: parsed)
-        XCTAssertEqual(Set(diff.changes.map { $0.id }), Set(expected.keys))
-
-        // apply() writes every accepted id through its keypath.
-        ScanDiff.apply(parsed: parsed, ids: Set(expected.keys), to: &ingredient)
-        for d in NutrientCatalog.scannable {
-            XCTAssertEqual(ingredient[keyPath: d.ingredient], expected[d.id],
-                           "apply() dropped '\(d.id)'")
-        }
-    }
-
-
-    // ------------------------------------------------------------
     // The two unit conversions live in the catalog only: copper is
     // stored mg / reported mcg (×1000), vitamin D stored mcg /
     // reported IU (×40); everything else passes through unchanged.
@@ -144,7 +101,8 @@ final class NutrientCatalogTests: XCTestCase {
 
 
     // ------------------------------------------------------------
-    // Derived orders match the historical hand-maintained lists.
+    // The derived dashboard order matches the historical
+    // hand-maintained list.
     // ------------------------------------------------------------
     func testDerivedOrdersMatchHistoricalLists() {
         XCTAssertEqual(vitaminMineralOrder, [
@@ -152,14 +110,6 @@ final class NutrientCatalogTests: XCTestCase {
             .manganese, .niacin, .pantothenicAcid, .phosphorus, .potassium,
             .riboflavin, .selenium, .thiamin, .vitaminA, .vitaminB12,
             .vitaminB6, .vitaminC, .vitaminD, .vitaminE, .vitaminK, .zinc
-        ])
-
-        XCTAssertEqual(NutrientCatalog.vmFormRows.map { $0.id }, [
-            "omega3", "vitaminD", "calcium", "iron", "potassium",
-            "vitaminA", "vitaminC", "vitaminE", "vitaminK", "thiamin",
-            "vitaminB6", "folate", "vitaminB12", "pantothenicAcid",
-            "phosphorus", "magnesium", "zinc", "selenium", "copper",
-            "manganese", "niacin", "riboflavin"
         ])
     }
 }

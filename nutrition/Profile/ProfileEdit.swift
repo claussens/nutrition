@@ -22,15 +22,6 @@ struct ProfileEdit: View {
 
     var body: some View {
         Form {
-            Section(header: Text("Scanner")) {
-                // Moved here from the Prep page toolbar. The Anthropic
-                // API key lives in the Keychain (app-global, not tied
-                // to any screen), so relocating this entry point does
-                // not affect a previously-entered key — it's the same
-                // SettingsView reading the same Keychain item.
-                NavigationLink("Scanner Settings", destination: SettingsView())
-                NavigationLink("Verify All Ingredients", destination: VerifyAllWalkthrough())
-            }
             // Profile switcher. Switching re-points the manager's
             // active id; the onChange below re-snapshots the draft so
             // the Base/Daily/Derived sections reflect the new profile

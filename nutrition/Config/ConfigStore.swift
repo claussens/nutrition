@@ -297,6 +297,12 @@ final class ConfigStore: ObservableObject {
     /// fall back to `.produce` / `.gram` rather than dropping the row.
     func runtimeFoods() -> [Food] {
         guard let data else { return [] }
+        return runtimeFoods(from: data)
+    }
+
+    /// The mapping over an explicit `ConfigData` — FoodMgr reloads from the
+    /// value `$data` emits on apply (Published fires before `data` is set).
+    func runtimeFoods(from data: ConfigData) -> [Food] {
         return data.foods.map { f in
             Food(name: f.name,
                  type: IngredientType(rawValue: f.type) ?? .produce,
@@ -318,7 +324,8 @@ final class ConfigStore: ObservableObject {
     }
 
     /// The bridge over an explicit `ConfigData` — the config smoke test runs the
-    /// bundled seed through this without publishing to the live store.
+    /// bundled seed through this without publishing to the live store, and
+    /// IngredientMgr reloads from the value `$data` emits on apply.
     func runtimeIngredients(from data: ConfigData) throws -> [Ingredient] {
         let decoder = JSONDecoder()
         return try data.ingredients.map { ci in

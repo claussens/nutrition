@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 
 enum IngredientType: String, Codable, CaseIterable, Identifiable {
@@ -24,28 +25,37 @@ enum IngredientType: String, Codable, CaseIterable, Identifiable {
 class IngredientMgr: ObservableObject {
 
 
-    // Config-owned: ingredients reload from nutrition-config on every
-    // launch. Runtime edits (Edit / Verify with AI) are deliberately
-    // session-scoped — there is NO UserDefaults persistence here, and
-    // the edit screens say so. A proper export-to-config flow is
-    // future work (nutrition.md P3.4).
+    // Config-owned: ingredients are authored in nutrition-config (via the
+    // MCP server), never in the app. The list loads at launch and is
+    // replaced wholesale whenever ConfigSync applies a refresh. The one
+    // runtime change (foodActive) is session-scoped — there is NO
+    // UserDefaults persistence here.
     @Published var ingredients: [Ingredient] = []
+
+    private var configSubscription: AnyCancellable?
 
 
     init() {
-        // Surface config load failures in the console instead of silently
-        // emptying the DB; a proper alert / last-good cache is future work.
-        do {
-            self.ingredients = try ConfigStore.shared.runtimeIngredients()
-        } catch {
-            print("IngredientMgr: FAILED to load ingredients from config: \(error)")
-            self.ingredients = []
-        }
+        guard let data = ConfigStore.shared.data else { return }
+        load(from: data)
+        // @Published emits on willSet, so use the emitted value rather
+        // than re-reading ConfigStore.shared.data (still the old set).
+        configSubscription = ConfigStore.shared.$data
+            .dropFirst()
+            .compactMap { $0 }
+            .sink { [weak self] data in self?.load(from: data) }
     }
 
 
-    func add(_ ingredient: Ingredient) {
-        self.ingredients.append(ingredient)
+    // Surface config load failures in the console instead of silently
+    // emptying the list; a proper alert / last-good cache is future work.
+    private func load(from data: ConfigData) {
+        do {
+            ingredients = try ConfigStore.shared.runtimeIngredients(from: data)
+        } catch {
+            print("IngredientMgr: FAILED to load ingredients from config: \(error)")
+            ingredients = []
+        }
     }
 
 
@@ -109,35 +119,11 @@ class IngredientMgr: ObservableObject {
 
 
     // Flip whether an ingredient is an active member of its Food
-    // (Prep page tap). Mutating the @Published array persists via
-    // the existing didSet.
+    // (Prep page tap). Session-scoped; the next config refresh or
+    // launch resets it.
     func toggleFoodActive(name: String) {
         if let index = ingredients.firstIndex(where: { $0.name == name }) {
             ingredients[index].foodActive.toggle()
-        }
-    }
-
-
-    func update(_ ingredient: Ingredient) {
-        if let index = ingredients.firstIndex(where: { $0.id == ingredient.id }) {
-            ingredients[index] = ingredient
-        }
-    }
-
-
-    func move(from: IndexSet, to: Int) {
-        ingredients.move(fromOffsets: from, toOffset: to)
-    }
-
-
-    func deleteSet(indexSet: IndexSet) {
-        ingredients.remove(atOffsets: indexSet)
-    }
-
-
-    func delete(_ ingredient: Ingredient) {
-        if let index = ingredients.firstIndex(where: { $0.id == ingredient.id }) {
-            ingredients.remove(at: index)
         }
     }
 }

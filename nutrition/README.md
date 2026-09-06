@@ -2,9 +2,7 @@
 
 ## P0
 
-- EAN scanner / API using crypto pattern
 - Ingredient search bar using crypto pattern
-  curl https://world.openfoodfacts.org/api/v0/product/0099482402891.json
 - Checkmark visual indicator that save was successful using crypto pattern
 - NavBar appearance in app.swift using crypto pattern
 - Swipe menu from menuItem page that supports Unavailable
@@ -12,7 +10,6 @@
 - Save buttons only appear when data's been modified
 
 - Meat meal adjustments: Add delete capability (to both add/edit)
-- Fix issue wrt what meal adjustments are shown in IngredientAdd
 - BUG: Fix ing/adj so they don't serialize on each character typed
 - BUG: Disallow a duplicate named ingredient
 - Serialization MVVM sample project

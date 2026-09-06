@@ -1,38 +1,20 @@
 import Foundation
 import Security
 
-// Keychain wrapper holding the app's credentials: the user's Anthropic API
-// key and the GitHub PAT used by ConfigSync.
+// Keychain wrapper holding the app's one credential: the GitHub PAT used
+// by ConfigSync.
 //
-// Why Keychain (not UserDefaults): the rest of the app stores ingredient
-// data in UserDefaults, but a third-party API key is a credential — it
-// belongs in the Keychain so it's encrypted at rest, survives reinstall,
-// and never lands in iCloud Backup as plain text.
+// Why Keychain (not UserDefaults): the rest of the app stores its data in
+// UserDefaults, but a token is a credential — it belongs in the Keychain so
+// it's encrypted at rest, survives reinstall, and never lands in iCloud
+// Backup as plain text.
 //
-// We use one account string per credential (`anthropic-api-key`,
-// `github-pat`) under one service (`com.claussen.nutrition`). If we ever
-// add another key (OpenAI, etc.) we just add another `account` string.
+// One account string per credential (`github-pat`) under one service
+// (`com.claussen.nutrition`). Another key would be another `account`.
 enum KeychainStore {
 
     private static let service = "com.claussen.nutrition"
-    private static let anthropicAccount = "anthropic-api-key"
     private static let githubAccount = "github-pat"
-
-
-    static func anthropicKey() -> String? {
-        return read(account: anthropicAccount)
-    }
-
-
-    @discardableResult
-    static func setAnthropicKey(_ value: String) -> Bool {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            return delete(account: anthropicAccount)
-        } else {
-            return write(account: anthropicAccount, value: trimmed)
-        }
-    }
 
 
     /// The stored GitHub personal access token, or nil if none is set.
@@ -148,15 +130,13 @@ enum KeychainStore {
 /// pass secrets and toggles WITHOUT the Settings screen — compiled out of Release.
 ///
 ///   • `--gh-token <t>`      GitHub PAT     (else env `GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_API_KEY`)
-///   • `--anthropic-key <k>` Anthropic key  (else env `ANTHROPIC_API_KEY`)
 ///   • `--debug`             verbose dev logging of resolved sources
 ///   • `-c` / `--config-dir` local config dir (see `LocalConfigSource`)
 ///
-/// `scripts/sim.sh` forwards `--gh-token`/`--anthropic-key` (or the env vars) to
-/// the app both as launch args AND as `SIMCTL_CHILD_*` env vars, so either
-/// channel works. `seedCredentials()` writes any supplied secret into the
-/// Keychain so every existing code path (GitHub config sync, the Anthropic label
-/// scanner) picks it up. `GITHUB_API_KEY` is accepted as a GitHub env alias to
+/// `scripts/sim.sh` forwards `--gh-token` (or the env vars) to the app both as
+/// a launch arg AND as a `SIMCTL_CHILD_*` env var, so either channel works.
+/// `seedCredentials()` writes the token into the Keychain so the GitHub config
+/// sync picks it up. `GITHUB_API_KEY` is accepted as a GitHub env alias to
 /// align with the launch auto-refresh gate in `NutritionApp`.
 enum DevLaunch {
     /// `--debug` present → verbose dev logging.
@@ -170,8 +150,8 @@ enum DevLaunch {
         return nil
     }
 
-    /// Seed GitHub + Anthropic secrets from launch args, then env vars (args
-    /// win), into the Keychain. No-op when nothing is supplied. Call once at launch.
+    /// Seed the GitHub token from the launch arg, then env vars (arg wins),
+    /// into the Keychain. No-op when nothing is supplied. Call once at launch.
     static func seedCredentials() {
         let env = ProcessInfo.processInfo.environment
         if let gh = argValue(["--gh-token", "--github-token"]) {
@@ -181,15 +161,8 @@ enum DevLaunch {
             KeychainStore.setGitHubToken(gh)
             if verbose { print("Nutrition: seeded GitHub token from env") }
         }
-        if let ant = argValue(["--anthropic-key", "--ant-key"]) {
-            KeychainStore.setAnthropicKey(ant)
-            if verbose { print("Nutrition: seeded Anthropic key from launch arg") }
-        } else if let ant = env["ANTHROPIC_API_KEY"], !ant.isEmpty {
-            KeychainStore.setAnthropicKey(ant)
-            if verbose { print("Nutrition: seeded Anthropic key from env") }
-        }
         if verbose {
-            print("Nutrition: --debug on · config-dir=\(LocalConfigSource.directory ?? "none") · gh=\(KeychainStore.githubToken() != nil) · anthropic=\(KeychainStore.anthropicKey() != nil)")
+            print("Nutrition: --debug on · config-dir=\(LocalConfigSource.directory ?? "none") · gh=\(KeychainStore.githubToken() != nil)")
         }
     }
 }

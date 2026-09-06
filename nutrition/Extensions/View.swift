@@ -42,6 +42,38 @@ extension View {
     }
 }
 
+// Shared Cancel/Save toolbar for the add/edit screens (adjustments,
+// meal settings): Cancel/Save in the bar, Save + keyboard-dismiss in
+// the keyboard group, back button hidden. `saveDisabled` covers
+// screens that gate Save.
+extension View {
+    func cancelSaveToolbar(saveDisabled: Bool = false,
+                           onCancel: @escaping () -> Void,
+                           onSave: @escaping () -> Void) -> some View {
+        self
+          .navigationBarBackButtonHidden(true)
+          .toolbar {
+              ToolbarItem(placement: .navigation) {
+                  Button("Cancel", action: onCancel)
+                    .foregroundColor(Color.theme.blueYellow)
+              }
+              ToolbarItem(placement: .primaryAction) {
+                  Button("Save", action: onSave)
+                    .foregroundColor(Color.theme.blueYellow)
+                    .disabled(saveDisabled)
+              }
+              ToolbarItemGroup(placement: .keyboard) {
+                  HStack {
+                      DismissKeyboard()
+                      Spacer()
+                      Button("Save", action: onSave)
+                        .foregroundColor(Color.theme.blueYellow)
+                  }
+              }
+          }
+    }
+}
+
 struct DismissKeyboard: View {
     var body: some View {
         Button {

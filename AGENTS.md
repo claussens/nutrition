@@ -6,6 +6,13 @@ asking, install to the phone without asking, no simulator) are in
 `~/src/AGENTS.md`. Seed data and the RDA table live in the sibling
 `../nutrition-config` repo, not here.
 
+Ingredients (foods, variants, brands, prices) are authored only in
+`nutrition-config`, through its MCP server. The app has no ingredient
+add/edit/delete screens and no label scanner; it fetches the config
+(`Config/ConfigSync.swift`) from the Prep tab's pull-to-refresh or the
+hamburger menu's "Refresh data", and `IngredientMgr` / `FoodMgr` reload
+whenever `ConfigStore` applies a new set. Do not add in-app authoring back.
+
 ## Build, test, install
 
 The project is XcodeGen-generated from `project.yml`; `nutrition.xcodeproj`

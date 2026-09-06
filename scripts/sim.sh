@@ -15,7 +15,6 @@
 #                            absolutized here so the simulator can read them.
 #   --debug                  verbose dev logging inside the app
 #   --gh-token <tok>         GitHub PAT       (else $GITHUB_TOKEN / $GH_TOKEN)
-#   --anthropic-key <key>    Anthropic key    (else $ANTHROPIC_API_KEY)
 #
 # Credentials reach the app two ways (either works): as launch args, AND as
 # SIMCTL_CHILD_* env vars injected into the launched process.
@@ -63,7 +62,6 @@ build() {
 parse_run_flags() {
   LAUNCH_ARGS=()
   GH="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
-  ANT="${ANTHROPIC_API_KEY:-}"
   while [ $# -gt 0 ]; do
     case "$1" in
       -c|--config-dir)
@@ -72,16 +70,13 @@ parse_run_flags() {
         LAUNCH_ARGS+=(--config-dir "$dir") ;;
       --debug)         LAUNCH_ARGS+=(--debug); shift ;;
       --gh-token)      GH="$2"; shift 2 ;;
-      --anthropic-key) ANT="$2"; shift 2 ;;
       *)               LAUNCH_ARGS+=("$1"); shift ;;
     esac
   done
   # Credentials also travel as launch args so the app can read either channel.
   [ -n "$GH" ]  && LAUNCH_ARGS+=(--gh-token "$GH")
-  [ -n "$ANT" ] && LAUNCH_ARGS+=(--anthropic-key "$ANT")
   # …and as env, injected into the launched app via SIMCTL_CHILD_*.
   [ -n "$GH" ]  && export SIMCTL_CHILD_GITHUB_TOKEN="$GH"
-  [ -n "$ANT" ] && export SIMCTL_CHILD_ANTHROPIC_API_KEY="$ANT"
 }
 
 case "${1:-run}" in
