@@ -22,13 +22,12 @@ struct AdjustmentList: View {
                                                  name: adjustment.name,
                                                  group: adjustment.group,
                                                  amount: adjustment.amount,
-                                                 consumptionUnit: getConsumptionUnit(adjustment.name))
+                                                 consumptionUnit: foodMgr.consumptionUnit(for: adjustment.name, ingredientMgr: ingredientMgr))
                                })
                   .foregroundColor(adjustment.active ? Color.theme.blackWhite : Color.theme.red)
                   .swipeActions(edge: .leading) {
                       Button {
-                          let newAdjustment = adjustmentMgr.toggleActive(adjustment)
-                          print("  \(newAdjustment!.name) active: \(newAdjustment!.active)")
+                          adjustmentMgr.toggleActive(adjustment)
                       } label: {
                           Label("", systemImage: adjustment.active ? "pause.circle" : "play.circle")
                       }
@@ -56,11 +55,11 @@ struct AdjustmentList: View {
               ToolbarItem(placement: .principal) {
                   Button {
                       showInactive.toggle()
-                      print("  Toggling showInactive: \(showInactive) (adjustment)")
                   } label: {
-                      Image(systemName: !adjustmentMgr.inactiveIngredientsExist() ? "" : showInactive ? "eye" : "eye.slash")
+                      Image(systemName: showInactive ? "eye" : "eye.slash")
                   }
                     .foregroundColor(Color.theme.blueYellow)
+                    .opacity(adjustmentMgr.inactiveIngredientsExist() ? 1 : 0)
               }
               ToolbarItem(placement: .primaryAction) {
                   NavigationLink("Add", destination: AdjustmentAdd())
@@ -77,23 +76,6 @@ struct AdjustmentList: View {
 
     func deleteAction(indexSet: IndexSet) {
         adjustmentMgr.deleteSet(indexSet: indexSet)
-    }
-
-
-    // `name` is a Food name (an adjustment targets a Food). Resolve
-    // it to the Food's current member and read the Food-level unit
-    // via FoodMgr. Falls back to a same-named plain ingredient, then
-    // .gram — never force-unwraps (the bare canonical ingredients
-    // that used to back Food names no longer exist).
-    func getConsumptionUnit(_ name: String) -> Unit {
-        if let f = foodMgr.getByName(name: name),
-           let ing = ingredientMgr.getByName(name: f.currentIngredientName) {
-            return foodMgr.consumptionUnit(for: ing)
-        }
-        if let ing = ingredientMgr.getByName(name: name) {
-            return foodMgr.consumptionUnit(for: ing)
-        }
-        return .gram
     }
 }
 

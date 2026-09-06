@@ -175,17 +175,10 @@ extension View {
     }
 
 
-    // Hides the system-provided List/ScrollView background on iOS 16+
-    // so a custom .background color underneath shows through.  No-op on
-    // iOS 15 (the modifier doesn't exist there) — falls back to UIKit
-    // appearance overrides if those are also configured.  Used by
-    // MealList to make the list area transparent over its grey backdrop.
-    @ViewBuilder
+    // Hides the system-provided List/ScrollView background so a custom
+    // .background color underneath shows through. Used by MealList to
+    // make the list area transparent over its grey backdrop.
     func hiddenScrollBackground() -> some View {
-        if #available(iOS 16.0, *) {
-            self.scrollContentBackground(.hidden)
-        } else {
-            self
-        }
+        self.scrollContentBackground(.hidden)
     }
 }

@@ -63,51 +63,6 @@ class IngredientMgr: ObservableObject {
         return ingredients.sorted(by: { $0.name < $1.name })
     }
 
-    // Return an array of sorted ingredients that are not:
-    // 1. already part of the meal ingredients list
-    // 2. that are not categorized as meats
-    //
-    // This list is used by the Meal Add and the Adjustment Add
-    // dialogs to add a new ingredient to a meal that isn't already
-    // part of the meal ingredient set or to add a new adjustment
-    // ingredient to the adjustments list.
-    func getNewMealIngredientNames(existingMealIngredientNames: [String]) -> [String] {
-        let existingMealIngredientNamesSet = Set(existingMealIngredientNames)
-
-        // Remove the existing meal ingredients and meats leaving the
-        // set of ingredient names to potentially add
-        var ingredientNamesSet = Set(ingredients.map { $0.name })
-        ingredientNamesSet.subtract(existingMealIngredientNamesSet)
-        // ingredientNamesSet.subtract(meatNamesSet)
-
-        // Convert the set to an array, sort, and return
-        var pickerOptions = [String](ingredientNamesSet)
-        pickerOptions.sort()
-        return pickerOptions
-    }
-
-    // Returns an array of of ingredients that are categorized as
-    // meats (ingredient.meat = true) in addition to 'None'.  This
-    // list is used by the Meal Configure dialog to configure the meat
-    // for the meal (or 'None' if there's no meat).
-    func getAllMeatNames(foodMgr: FoodMgr) -> [String] {
-        let meats = ingredients.filter({ foodMgr.isMeat($0) })
-        var meatNames: [String] = []
-        meatNames.append("None")
-        for meat in meats {
-            meatNames.append(meat.name)
-        }
-        return meatNames
-    }
-
-
-    func getNamesSorted() -> [String] {
-        let sorted = ingredients.sorted{ (ing1, ing2) -> Bool in
-            return ing1.name < ing2.name
-        }
-        return sorted.map { $0.name }
-    }
-
 
     func getByName(name: String) -> Ingredient? {
         if let index = ingredients.firstIndex(where: { $0.name == name }) {
@@ -128,29 +83,15 @@ class IngredientMgr: ObservableObject {
     }
 }
 
-struct MealAdjustment: Codable, Identifiable {
-    var id: String
-
-    var name: String
-    var amount: Double
-    var consumptionUnit: Unit
-
-    init(id: String = UUID().uuidString, name: String, amount: Double, consumptionUnit: Unit = Unit.gram) {
-        self.id = id
-        self.name = name
-        self.amount = amount
-        self.consumptionUnit = consumptionUnit
-    }
-}
-
+// The runtime ingredient. Every field here is something the config
+// (ConfigIngredient) can supply; a field the config cannot author has
+// no business on the model, since the app has no ingredient editor.
 struct Ingredient: Codable, Identifiable {
     var id: String
 
     var name: String
 
     var brand: String
-    var fullName: String
-    var category: String
     // Optional group/variant set this ingredient belongs to (e.g.
     // "Eggs"). Empty = not grouped. The Group entity (FoodMgr)
     // owns the group's default member; membership lives here.
@@ -159,9 +100,6 @@ struct Ingredient: Codable, Identifiable {
     var url: String
     var totalCost: Double
     var totalGrams: Double
-
-    var ingredients: [String]
-    var allergens: [String]
 
     var servingSize: Double
 
@@ -216,11 +154,6 @@ struct Ingredient: Codable, Identifiable {
     var consumptionUnit: Unit
     var consumptionGrams: Double
 
-    var meatAmount: Double
-    var mealAdjustments: [MealAdjustment]
-
-    var microNutrients: Bool
-
     var verified: String
 
     var stepAmount: Double   // 0 means "auto" — use the effectiveStep heuristic
@@ -238,14 +171,10 @@ struct Ingredient: Codable, Identifiable {
     init(id: String = UUID().uuidString,
          name: String,
          brand: String = "",
-         fullName: String = "",
-         category: String = "",
          foodName: String = "",
          url: String = "",
          totalCost: Double = 0,
          totalGrams: Double = 0,
-         ingredients: [String] = [],
-         allergens: [String] = [],
          servingSize: Double,
          calories: Double,
          fat: Double,
@@ -287,9 +216,6 @@ struct Ingredient: Codable, Identifiable {
          calcium: Double = 0,
          consumptionUnit: Unit = Unit.gram,
          consumptionGrams: Double,
-         meatAmount: Double = 200,
-         mealAdjustments: [MealAdjustment] = [],
-         microNutrients: Bool = false,
          verified: String = "",
          stepAmount: Double = 0,
          defaultAmount: Double = 0,
@@ -300,16 +226,11 @@ struct Ingredient: Codable, Identifiable {
         self.name = name
 
         self.brand = brand
-        self.fullName = fullName
-        self.category = category
         self.foodName = foodName
 
         self.url = url
         self.totalCost = totalCost
         self.totalGrams = totalGrams
-
-        self.ingredients = ingredients
-        self.allergens = allergens
 
         self.servingSize = servingSize
         self.calories = calories
@@ -359,11 +280,6 @@ struct Ingredient: Codable, Identifiable {
         self.consumptionUnit = consumptionUnit
         self.consumptionGrams = consumptionGrams
 
-        self.meatAmount = meatAmount
-        self.mealAdjustments = mealAdjustments
-
-        self.microNutrients = microNutrients
-
         self.verified = verified
 
         self.stepAmount = stepAmount
@@ -376,21 +292,13 @@ struct Ingredient: Codable, Identifiable {
         self.id = try c.decode(String.self, forKey: .id)
         self.name = try c.decode(String.self, forKey: .name)
         self.brand = try c.decode(String.self, forKey: .brand)
-        self.fullName = try c.decode(String.self, forKey: .fullName)
-        self.category = try c.decode(String.self, forKey: .category)
-        // Migration-safe: absent in data saved before groups existed.
         self.foodName = try c.decodeIfPresent(String.self, forKey: .foodName) ?? ""
         self.url = try c.decode(String.self, forKey: .url)
         self.totalCost = try c.decode(Double.self, forKey: .totalCost)
         self.totalGrams = try c.decode(Double.self, forKey: .totalGrams)
-        self.ingredients = try c.decode([String].self, forKey: .ingredients)
-        self.allergens = try c.decode([String].self, forKey: .allergens)
         self.servingSize = try c.decode(Double.self, forKey: .servingSize)
         self.consumptionUnit = try c.decode(Unit.self, forKey: .consumptionUnit)
         self.consumptionGrams = try c.decode(Double.self, forKey: .consumptionGrams)
-        self.meatAmount = try c.decode(Double.self, forKey: .meatAmount)
-        self.mealAdjustments = try c.decode([MealAdjustment].self, forKey: .mealAdjustments)
-        self.microNutrients = try c.decode(Bool.self, forKey: .microNutrients)
         self.verified = try c.decode(String.self, forKey: .verified)
         self.stepAmount = try c.decodeIfPresent(Double.self, forKey: .stepAmount) ?? 0
         self.defaultAmount = try c.decodeIfPresent(Double.self, forKey: .defaultAmount) ?? 0
@@ -425,50 +333,15 @@ struct Ingredient: Codable, Identifiable {
         return 0
     }
     var costPerGram: Double { let g = effectiveTotalGrams; return g > 0 ? totalCost / g : 0 }
-    var costPer100: Double { get { costPerGram * 100 } set {} }
+    var costPer100: Double { costPerGram * 100 }
     var costPerServing: Double { costPerGram * servingSize }
 
-    var calories100: Double {
-        set {
-        }
-        get {
-            servingSize > 0 ? (calories * 100) / servingSize : 0
-        }
-    }
-
-    var fat100: Double {
-        set {
-        }
-        get {
-            servingSize > 0 ? (fat * 100) / servingSize : 0
-        }
-    }
-
-    var fiber100: Double {
-        set {
-        }
-        get {
-            servingSize > 0 ? (fiber * 100) / servingSize : 0
-        }
-    }
-
-    var netCarbs100: Double {
-        set {
-        }
-        get {
-            servingSize > 0 ? (netCarbs * 100) / servingSize : 0
-        }
-    }
-
-    var protein100: Double {
-        set {
-        }
-        get {
-            servingSize > 0 ? (protein * 100) / servingSize : 0
-        }
-    }
-
-
+    // Per-100g macros; 0 when the serving size is unknown.
+    var calories100: Double { servingSize > 0 ? (calories * 100) / servingSize : 0 }
+    var fat100: Double      { servingSize > 0 ? (fat * 100) / servingSize : 0 }
+    var fiber100: Double    { servingSize > 0 ? (fiber * 100) / servingSize : 0 }
+    var netCarbs100: Double { servingSize > 0 ? (netCarbs * 100) / servingSize : 0 }
+    var protein100: Double  { servingSize > 0 ? (protein * 100) / servingSize : 0 }
 }
 
 
@@ -481,135 +354,4 @@ struct NutrientCodingKey: CodingKey {
     init(_ id: String) { self.stringValue = id }
     init?(stringValue: String) { self.stringValue = stringValue }
     init?(intValue: Int) { nil }
-}
-
-
-// ============================================================
-// AvoidList — substances to flag when they appear in an
-// Ingredient's `ingredients` (label) list. Pure static data +
-// matcher; no state, no persistence. Short acronyms (BHA/BHT/
-// MSG) match whole-word only so they don't fire on substrings.
-// ============================================================
-struct AvoidEntry {
-    let canonicalName: String
-    let category: String
-    let substrings: [String]      // all lowercased
-    var wholeWordOnly: Bool = false
-}
-
-enum AvoidList {
-
-    static let entries: [AvoidEntry] = [
-        // Added sugars & syrups (all corn-syrup variants)
-        AvoidEntry(canonicalName: "High-Fructose Corn Syrup", category: "Added sugar",
-                   substrings: ["high fructose corn syrup", "high-fructose corn syrup", "hfcs"]),
-        AvoidEntry(canonicalName: "Corn Syrup", category: "Added sugar",
-                   substrings: ["corn syrup"]),
-        AvoidEntry(canonicalName: "Glucose-Fructose Syrup", category: "Added sugar",
-                   substrings: ["glucose-fructose syrup", "glucose fructose syrup"]),
-        AvoidEntry(canonicalName: "Fructose Syrup", category: "Added sugar",
-                   substrings: ["fructose syrup"]),
-        AvoidEntry(canonicalName: "Invert Sugar", category: "Added sugar",
-                   substrings: ["invert sugar", "invert syrup"]),
-        AvoidEntry(canonicalName: "Dextrose", category: "Added sugar",
-                   substrings: ["dextrose"]),
-        AvoidEntry(canonicalName: "Maltodextrin", category: "Added sugar",
-                   substrings: ["maltodextrin"]),
-        AvoidEntry(canonicalName: "Crystalline Fructose", category: "Added sugar",
-                   substrings: ["crystalline fructose"]),
-        AvoidEntry(canonicalName: "Brown Rice Syrup", category: "Added sugar",
-                   substrings: ["brown rice syrup", "rice syrup"]),
-        AvoidEntry(canonicalName: "Agave Syrup", category: "Added sugar",
-                   substrings: ["agave nectar", "agave syrup"]),
-
-        // Trans fats / refined seed oils
-        AvoidEntry(canonicalName: "Partially Hydrogenated Oil (trans fat)", category: "Trans fat",
-                   substrings: ["partially hydrogenated"]),
-        AvoidEntry(canonicalName: "Soybean Oil", category: "Seed oil",
-                   substrings: ["soybean oil"]),
-        AvoidEntry(canonicalName: "Canola Oil", category: "Seed oil",
-                   substrings: ["canola oil"]),
-        AvoidEntry(canonicalName: "Sunflower Oil", category: "Seed oil",
-                   substrings: ["sunflower oil"]),
-        AvoidEntry(canonicalName: "Safflower Oil", category: "Seed oil",
-                   substrings: ["safflower oil"]),
-        AvoidEntry(canonicalName: "Cottonseed Oil", category: "Seed oil",
-                   substrings: ["cottonseed oil"]),
-        AvoidEntry(canonicalName: "Corn Oil", category: "Seed oil",
-                   substrings: ["corn oil"]),
-
-        // Artificial sweeteners
-        AvoidEntry(canonicalName: "Aspartame", category: "Artificial sweetener",
-                   substrings: ["aspartame"]),
-        AvoidEntry(canonicalName: "Sucralose", category: "Artificial sweetener",
-                   substrings: ["sucralose"]),
-        AvoidEntry(canonicalName: "Acesulfame Potassium", category: "Artificial sweetener",
-                   substrings: ["acesulfame potassium", "acesulfame-k", "ace-k"]),
-        AvoidEntry(canonicalName: "Saccharin", category: "Artificial sweetener",
-                   substrings: ["saccharin"]),
-
-        // Synthetic dyes
-        AvoidEntry(canonicalName: "Red 40", category: "Synthetic dye",
-                   substrings: ["red 40", "red no. 40", "allura red"]),
-        AvoidEntry(canonicalName: "Yellow 5", category: "Synthetic dye",
-                   substrings: ["yellow 5", "yellow no. 5", "tartrazine"]),
-        AvoidEntry(canonicalName: "Yellow 6", category: "Synthetic dye",
-                   substrings: ["yellow 6", "yellow no. 6", "sunset yellow"]),
-        AvoidEntry(canonicalName: "Blue 1", category: "Synthetic dye",
-                   substrings: ["blue 1", "blue no. 1", "brilliant blue"]),
-        AvoidEntry(canonicalName: "Red 3", category: "Synthetic dye",
-                   substrings: ["red 3", "red no. 3", "erythrosine"]),
-
-        // Preservatives / antioxidants
-        AvoidEntry(canonicalName: "BHA", category: "Preservative",
-                   substrings: ["butylated hydroxyanisole", "bha"], wholeWordOnly: true),
-        AvoidEntry(canonicalName: "BHT", category: "Preservative",
-                   substrings: ["butylated hydroxytoluene", "bht"], wholeWordOnly: true),
-        AvoidEntry(canonicalName: "TBHQ", category: "Preservative",
-                   substrings: ["tbhq", "tert-butylhydroquinone", "tertiary butylhydroquinone"]),
-        AvoidEntry(canonicalName: "Sodium Benzoate", category: "Preservative",
-                   substrings: ["sodium benzoate"]),
-        AvoidEntry(canonicalName: "Sodium Nitrite", category: "Preservative",
-                   substrings: ["sodium nitrite"]),
-        AvoidEntry(canonicalName: "Sodium Nitrate", category: "Preservative",
-                   substrings: ["sodium nitrate"]),
-        AvoidEntry(canonicalName: "Propyl Gallate", category: "Preservative",
-                   substrings: ["propyl gallate"]),
-
-        // Flavor enhancers
-        AvoidEntry(canonicalName: "MSG", category: "Flavor enhancer",
-                   substrings: ["monosodium glutamate", "msg"], wholeWordOnly: true),
-        AvoidEntry(canonicalName: "Autolyzed Yeast Extract", category: "Flavor enhancer",
-                   substrings: ["autolyzed yeast"]),
-        AvoidEntry(canonicalName: "Hydrolyzed Protein", category: "Flavor enhancer",
-                   substrings: ["hydrolyzed"]),
-
-        // Emulsifiers of concern
-        AvoidEntry(canonicalName: "Carrageenan", category: "Emulsifier",
-                   substrings: ["carrageenan"]),
-        AvoidEntry(canonicalName: "Polysorbate 80", category: "Emulsifier",
-                   substrings: ["polysorbate 80"]),
-        AvoidEntry(canonicalName: "Carboxymethylcellulose", category: "Emulsifier",
-                   substrings: ["carboxymethylcellulose", "cellulose gum"]),
-    ]
-
-
-    // All flagged substances present in the given label list.
-    static func allMatches(in ingredients: [String]) -> [AvoidEntry] {
-        guard !ingredients.isEmpty else { return [] }
-        let hay = ingredients.map { $0.lowercased() }
-        let tokens = Set(hay.flatMap {
-            $0.split { !$0.isLetter && !$0.isNumber }.map(String.init)
-        })
-        return entries.filter { e in
-            e.substrings.contains { sub in
-                e.wholeWordOnly ? tokens.contains(sub)
-                                : hay.contains { $0.contains(sub) }
-            }
-        }
-    }
-
-    static func firstMatch(in ingredients: [String]) -> AvoidEntry? {
-        allMatches(in: ingredients).first
-    }
 }

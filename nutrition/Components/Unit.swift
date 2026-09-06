@@ -96,22 +96,6 @@ enum Unit: ValueType {
     }
 
 
-    static func ingredientOptions() -> [Unit] {
-        var options: [Unit] = []
-        options.append(bar)
-        options.append(can)
-        options.append(cup)
-        options.append(egg)
-        options.append(gram)
-        options.append(piece)
-        options.append(slice)
-        options.append(tablespoon)
-        options.append(teaspoon)
-        options.append(whole)
-        return options
-    }
-
-
     func formattedString(_ precision: Int) -> String {
         return String(describing: self).capitalized
     }

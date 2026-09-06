@@ -301,30 +301,6 @@ struct DailySummary: View {
     }
 
 
-    @ViewBuilder
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-          .font(.caption2)
-          .foregroundColor(Color.theme.blackWhiteSecondary)
-          .padding(.top, 2)
-    }
-
-
-    @ViewBuilder
-    private func valueCell(_ label: String, _ value: String) -> some View {
-        HStack {
-            Text(label).font(.caption)
-            Spacer()
-            Text(value).font(.callout)
-        }
-          .padding(.horizontal, 10)
-          .padding(.vertical, 6)
-          .background(Color.theme.blackWhite.opacity(0.04))
-          .cornerRadius(6)
-          .frame(maxWidth: .infinity)
-    }
-
-
     // One row's worth of data for VitaminMineralRow, surfaced only when
     // the nutrient is out of range.  The `max` here is the *displayed*
     // max — 0 for supp-only-UL nutrients (matches VitaminMineralList) so

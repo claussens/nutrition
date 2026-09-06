@@ -61,8 +61,7 @@ class FoodMgr: ObservableObject {
     // Config-owned, exactly like IngredientMgr — the config is the
     // source of truth, loaded at launch and replaced wholesale when
     // ConfigSync applies a refresh. Each entry is a food and its
-    // current (default) member ingredient. Runtime changes (ensure /
-    // setCurrent) are session-scoped; there is no UserDefaults
+    // current (default) member ingredient. There is no UserDefaults
     // persistence.
     @Published var foods: [Food] = []
 
@@ -203,35 +202,6 @@ class FoodMgr: ObservableObject {
 
     func getByName(name: String) -> Food? {
         foods.first { $0.name == name }
-    }
-
-
-    var names: [String] {
-        foods.map { $0.name }.sorted()
-    }
-
-
-    // Create the food if it doesn't exist yet (first member added
-    // becomes the default). Idempotent — returns the existing food
-    // untouched if the name is already known.
-    @discardableResult
-    func ensure(name: String, defaultMember: String, type: IngredientType) -> Food {
-        if let existing = getByName(name: name) { return existing }
-        let f = Food(name: name, type: type, currentIngredientName: defaultMember)
-        foods.append(f)
-        return f
-    }
-
-
-    func setCurrent(food name: String, member: String) {
-        guard let idx = foods.firstIndex(where: { $0.name == name }) else { return }
-        foods[idx].currentIngredientName = member
-    }
-
-
-    // Drop a food entirely (e.g. its last member was unassigned).
-    func remove(name: String) {
-        foods.removeAll { $0.name == name }
     }
 }
 

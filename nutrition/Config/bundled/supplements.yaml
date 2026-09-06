@@ -3,13 +3,22 @@ shane:
     amount: 2
   - name: Creatine HCl
     amount: 2
-  - name: Glycine
+  - name: Fish Oil
     amount: 1
   - name: Vitamin D3 (1000 IU)
     amount: 1
+  - name: Taurine
+    amount: 1
   - name: SlowMag
     amount: 2
+  - name: Glycine
+    amount: 1
   - name: L-Theanine
     amount: 1
   - name: Apigenin
+    amount: 1
+caden:
+  - name: Naked Whey Isolate
+    amount: 4
+  - name: Creatine Monohydrate
     amount: 1

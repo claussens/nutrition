@@ -124,13 +124,20 @@
   consumption-unit: tablespoon
   consumption-grams: 14
   current-variant: Coconut Oil (365 by Whole Foods M 14 Fl Oz)
-- name: Creatine
+- name: Creatine HCl
   type: supplement
   default-amount: 0
   step-amount: 0
   consumption-unit: pill
   consumption-grams: 0.75
-  current-variant: Creatine HCl
+  current-variant: Creatine HCl (CON-CRET)
+- name: Creatine Monohydrate
+  type: supplement
+  default-amount: 1
+  step-amount: 1
+  consumption-unit: teaspoon
+  consumption-grams: 5
+  current-variant: Creatine Monohydrate (Thorne 180 Servings)
 - name: Cucumber
   type: produce
   default-amount: 150
@@ -161,11 +168,11 @@
   current-variant: Fish Oil
 - name: Glycine
   type: supplement
-  default-amount: 0
-  step-amount: 0
-  consumption-unit: pill
+  default-amount: 1
+  step-amount: 1
+  consumption-unit: teaspoon
   consumption-grams: 3
-  current-variant: Glycine
+  current-variant: Glycine (BulkSupplements 1kg)
 - name: Ham
   type: proteins
   default-amount: 1
@@ -236,6 +243,13 @@
   consumption-unit: tablespoon
   consumption-grams: 15
   current-variant: Mustard (Organicville 12 oz)
+- name: Naked Whey Isolate
+  type: proteins
+  default-amount: 4
+  step-amount: 1
+  consumption-unit: tablespoon
+  consumption-grams: 8
+  current-variant: Naked Whey Isolate (Naked Nutrition 2 LB)
 - name: Nuts
   type: nuts
   default-amount: 20

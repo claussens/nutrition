@@ -65,8 +65,7 @@ struct MealPlanner {
         // Initialize the total macros for each meal ingredient and
         // the total macros for all ingredients.  These will all be
         // updated later in this algorithm. The bulk pass visits
-        // non-supplements first, then supplements (the manager's
-        // getAllMealIngredients order).
+        // non-supplements first, then supplements.
         state.rows = state.rows.map { $0.setMacroActualsToZero() }
         let bulkOrder = state.rows.filter { !$0.isSupplement } + state.rows.filter { $0.isSupplement }
         for mealIngredient in bulkOrder {

@@ -14,9 +14,9 @@ struct TokenConfigSheet: View {
 
     @State private var token: String = ""
 
-    // Snapshot of what's persisted, captured on appear. Used to show
-    // a masked "currently set" hint without echoing the secret back
-    // into the editable field unmasked beyond what the user types.
+    // Snapshot of what's persisted, captured on appear, for the masked
+    // "Token set (••••abcd)" status line. The SecureField itself is
+    // seeded with the same value so Save without edits is a no-op.
     @State private var savedToken: String = ""
 
     // Set when the Keychain write fails so the user isn't silently

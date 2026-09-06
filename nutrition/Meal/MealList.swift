@@ -51,6 +51,7 @@ struct MealList: View {
           .background(Color(UIColor.systemGroupedBackground))
           .hiddenScrollBackground()
           .refreshable {
+              refreshFromHealthKit()
               generateMeal()
           }
           .environment(\.defaultMinListRowHeight, 5)
@@ -59,10 +60,9 @@ struct MealList: View {
           // extend full-width naturally; the negative padding was
           // pushing content past the screen edge and clipping the
           // ingredient names on the left and the chevron on the right.
-          .background(
-            NavigationLink(destination: MealConfigure(), isActive: $mealConfigureActive) {
-                Label("Configure", systemImage: "gear")
-            })
+          .navigationDestination(isPresented: $mealConfigureActive) {
+              MealConfigure()
+          }
           // Hide the system navigation bar; replace it with a fixed
           // header (toolbar + Dashboard) injected via .safeAreaInset.
           // Everything in the inset is anchored to the top — it never
@@ -73,6 +73,7 @@ struct MealList: View {
               headerView
           }
           .onAppear {
+              refreshFromHealthKit()
               generateMeal()
           }
           .alert("Reset Meal Ingredients?",
@@ -171,27 +172,17 @@ struct MealList: View {
                   }
               }
           }
-          .background(
-              NavigationLink(
-                  destination: Group {
-                      if let mi = detailFor {
-                          MealIngredientDetail(mealIngredient: mi)
-                      }
-                  },
-                  isActive: Binding(
-                      get: { detailFor != nil },
-                      set: { if !$0 { detailFor = nil } }
-                  )
-              ) {
-                  EmptyView()
+          .navigationDestination(isPresented: Binding(
+              get: { detailFor != nil },
+              set: { if !$0 { detailFor = nil } }
+          )) {
+              if let mi = detailFor {
+                  MealIngredientDetail(mealIngredient: mi)
               }
-          )
-          .background(
-              NavigationLink(destination: VitaminMineralList(),
-                             isActive: $vmListActive) {
-                  EmptyView()
-              }
-          )
+          }
+          .navigationDestination(isPresented: $vmListActive) {
+              VitaminMineralList()
+          }
     }
 
 
@@ -279,7 +270,6 @@ struct MealList: View {
                       }
                   }
             }
-              // .onMove(perform: moveAction)
               .onDelete(perform: deleteAction)
               .border(Color.theme.green, width: 0)
               // Compressed vertical insets — fits more ingredients per
@@ -485,11 +475,6 @@ struct MealList: View {
     }
 
 
-    // func moveAction(from source: IndexSet, to destination: Int) {
-    //     mealIngredientMgr.move(from: source, to: destination)
-    // }
-
-
     func deleteAction(indexSet: IndexSet) {
         mealIngredientMgr.deleteSet(indexSet: indexSet)
     }
@@ -513,43 +498,35 @@ struct MealList: View {
 
 
     func generateMeal() {
-
-        // Attempt to retrieve the body weight and body fat percentage
-        // from Health Kit and update the profile if new values are
-        // available.
-        getBodyWeightAndBodyFatFromHealthKit()
-
         var rng = SystemRandomNumberGenerator()
         planner.generateMeal(using: &rng)
     }
 
 
-    func getBodyWeightAndBodyFatFromHealthKit() {
+    // Pull the latest body weight and body fat percentage from Health
+    // into the profile. Runs on appear and on pull-to-refresh only —
+    // it used to run inside generateMeal, so every stepper tap fired
+    // three HealthKit queries. A changed value writes the profile,
+    // which re-renders the page with the new goals.
+    func refreshFromHealthKit() {
+        let profile = profileMgr.profile
+        guard profile.bodyMassFromHealthKit || profile.bodyFatPercentageFromHealthKit else { return }
         HealthStore.authorizeHealthKit { (success, error) in
             guard success else {
-                let baseMessage = "HealthKit Authorization Failed"
-                if let error = error {
-                    print("\(baseMessage). Reason: \(error)")
-                } else {
-                    print(baseMessage)
-                }
+                print("HealthKit authorization failed: \(error.map { "\($0)" } ?? "no reason")")
                 return
             }
-
-            // print("HealthKit successfully authorized.")
-            if profileMgr.profile.bodyMassFromHealthKit {
+            if profile.bodyMassFromHealthKit {
                 getBodyMass()
             }
-            if profileMgr.profile.bodyFatPercentageFromHealthKit {
+            if profile.bodyFatPercentageFromHealthKit {
                 getBodyFatPercentage()
             }
-            getActiveEnergyBurned()
         }
     }
 
 
     func getBodyMass() {
-        // print("Getting body mass")
         guard let sampleType = HKSampleType.quantityType(forIdentifier: .bodyMass) else {
             print("Body Mass sample type is no longer available in HealthKit")
             return
@@ -573,7 +550,6 @@ struct MealList: View {
 
 
     func getBodyFatPercentage() {
-        // print("Getting body fat percentage")
         guard let sampleType = HKSampleType.quantityType(forIdentifier: .bodyFatPercentage) else {
             print("Body Fat Percentage sample type is no longer available in HealthKit")
             return
@@ -592,34 +568,6 @@ struct MealList: View {
             if bodyFatPercentage != Double(profileMgr.profile.bodyFatPercentage) {
                 profileMgr.setBodyFatPercentage(bodyFatPercentage: bodyFatPercentage)
             }
-        }
-    }
-
-
-    func getActiveEnergyBurned() {
-        // print("Getting active energy burned")
-        guard let sampleType = HKSampleType.quantityType(forIdentifier: .activeEnergyBurned) else {
-            print("Active Energy Burned sample type is no longer available in HealthKit")
-            return
-        }
-
-        let calendar = Calendar.current
-        let now = Date()
-        let startDate = calendar.date(byAdding: .month, value: -1, to: now) ?? now
-
-        // let energySampleType = HKSampleType.quantityTypeForIdentifier(HKQuantityTypeIdentifierActiveEnergyBurned)
-        // let predicate = HKQuery.predicateForSamplesWithStartDate(startDate, endDate: endDate, options: .None)
-
-        // let query = HKSampleQuery(sampleType: energySampleType!, predicate: predicate, limit: 0, sortDescriptors: nil) { (query, results, error) in
-        HealthStore.getMostRecentSample(sampleType: sampleType, startDate: startDate) { (sample, error) in
-            guard let sample = sample else {
-                if let error = error {
-                    print("\(error)")
-                }
-                return
-            }
-
-            _ = sample.quantity.doubleValue(for: HKUnit.kilocalorie())
         }
     }
 
@@ -771,36 +719,6 @@ struct MealList: View {
     }
 
 
-    // Resolve a Food to the variant a composite should start with:
-    // its current default member, else any member, else the Food
-    // name itself (defensive).
-    private func defaultVariant(forFood foodName: String) -> String {
-        foodMgr.getByName(name: foodName)?.currentIngredientName
-            ?? ingredientMgr.getAll().first { $0.foodName == foodName }?.name
-            ?? foodName
-    }
-
-
-    // Add (or toggle off) a composite in the meal. Snapshots each
-    // component to its Food's current default variant. Created as
-    // Manual so the auto-adjust engine leaves it alone.
-    func addComposite(_ composite: FoodComposite) {
-        if let existing = mealIngredientMgr.getByName(name: composite.name) {
-            mealIngredientMgr.delete(existing)
-            generateMeal()
-            return
-        }
-        let parts = composite.components.map { c in
-            MealCompositePart(foodName: c.foodName,
-                              selectedVariantName: defaultVariant(forFood: c.foodName),
-                              amount: c.amount)
-        }
-        mealIngredientMgr.create(name: composite.name,
-                                 amount: 0,
-                                 adjustment: Constants.Manual,
-                                 compositeParts: parts)
-        generateMeal()
-    }
 }
 
 
@@ -870,10 +788,10 @@ struct MealRowView<NameLabel: View>: View {
                       foodTypePickerFor = mealIngredient
                   }
               } else {
-                // Just the name — IngredientRow is overkill here
-                // (its showMacros/showAmount are both off, and
-                // its inner GeometryReader+frame(height: 9) was
-                // glueing the text to the top of the 28pt row).
+                // Just the name — the adjustment list's IngredientRow
+                // is overkill here (its inner GeometryReader +
+                // frame(height: 9) glued the text to the top of the
+                // 28pt row).
                 // Plain Text centers vertically via the HStack's
                 // default .center alignment, matching the
                 // stepper and chevron.

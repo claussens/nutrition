@@ -1,6 +1,6 @@
 - name: Apigenin
   food: Apigenin
-  brand: Double Wood
+  brand: Swanson
   serving-size: 0.05
   consumption-unit: pill
   consumption-grams: 0.05
@@ -12,7 +12,8 @@
   price:
     total-cost: 19.95
     total-grams: 4.5
-  verified: 5/10/2026
+  url: https://www.amazon.com/dp/B001TEIJIQ
+  verified: 6/25/2026
 - name: Arugula (365 by Whole Foods M 5 OZ)
   food: Arugula
   brand: 365 by Whole Foods Market
@@ -96,9 +97,13 @@
   fiber: 3.4
   net-carbs: 0.9
   protein: 1
+  # Avocado total-grams convention: meal rows log EDIBLE grams, so
+  # total-grams = edible flesh per fruit x count (~140 g/medium,
+  # ~170 g/large), not whole-fruit or package weight — otherwise
+  # cost-per-gram (and every cost screen) is wrong.
   price:
     total-cost: 6.49
-    total-grams: 800
+    total-grams: 560
   url: https://www.wholefoodsmarket.com/grocery/product/b07fycb4wx
   verified: 5/16/2026
   nutrients:
@@ -124,7 +129,7 @@
   protein: 1
   price:
     total-cost: 3.49
-    total-grams: 300
+    total-grams: 840
   url: https://www.wholefoodsmarket.com/grocery/product/b09xxv8h97
   verified: 5/16/2026
   nutrients:
@@ -150,7 +155,7 @@
   protein: 1
   price:
     total-cost: 2.49
-    total-grams: 50
+    total-grams: 140
   url: https://www.wholefoodsmarket.com/grocery/product/b0014glse6
   verified: 5/16/2026
   nutrients:
@@ -176,7 +181,7 @@
   protein: 1
   price:
     total-cost: 1.79
-    total-grams: 50
+    total-grams: 170
   url: https://www.wholefoodsmarket.com/grocery/product/b000p72uzg
   verified: 5/16/2026
   nutrients:
@@ -204,7 +209,7 @@
   protein: 1
   price:
     total-cost: 0.99
-    total-grams: 560
+    total-grams: 140
   url: https://www.wholefoodsmarket.com/grocery/product/b000nogkn4
   verified: 5/16/2026
   nutrients:
@@ -234,10 +239,10 @@
   net-carbs: 0
   protein: 0
   price:
-    total-cost: 10.79
+    total-cost: 11.99
     total-grams: 473
   url: https://www.wholefoodsmarket.com/grocery/product/b07q4yng8w
-  verified: 9/1/22
+  verified: WF 9/5/2026
 - name: Avocado Oil (Chosen Foods)
   food: Avocado Oil
   brand: Chosen Foods
@@ -965,8 +970,8 @@
   verified: 5/16/2026
   nutrients:
     saturated-fat: 13
-- name: Creatine HCl
-  food: Creatine
+- name: Creatine HCl (CON-CRET)
+  food: Creatine HCl
   brand: CON-CRET
   serving-size: 0.75
   consumption-unit: pill
@@ -980,7 +985,22 @@
     total-cost: 25
     total-grams: 67.5
   url: https://www.wholefoodsmarket.com/grocery/product/b0bkcvlygx
-  verified: 5/10/2026
+- name: Creatine Monohydrate (Thorne 180 Servings)
+  food: Creatine Monohydrate
+  brand: Thorne
+  serving-size: 5
+  consumption-unit: teaspoon
+  consumption-grams: 5
+  calories: 0
+  fat: 0
+  fiber: 0
+  net-carbs: 0
+  protein: 0
+  price:
+    total-cost: 84.00
+    total-grams: 900
+  url: https://www.thorne.com/products/dp/creatine
+  verified: 6/25/2026
 - name: Cucumber (Wholesum Organic Mini, 1 lb)
   food: Cucumber
   brand: Wholesum
@@ -1103,7 +1123,7 @@
     total-cost: 34.99
     total-grams: 2747
   url: https://www.wholefoodsmarket.com/grocery/product/b074y6wz8x
-  verified: 3/16/22
+  verified: WF 9/5/2026
   nutrients:
     vitamin-e: 1.9
     vitamin-k: 8
@@ -1119,15 +1139,15 @@
   net-carbs: 0
   protein: 0
   price:
-    total-cost: 61.99
+    total-cost: 62.99
     total-grams: 560
   url: https://www.wholefoodsmarket.com/grocery/product/b001lf39ro
-  verified: 3/16/22
-- name: Glycine
+  verified: WF 9/5/2026
+- name: Glycine (BulkSupplements 1kg)
   food: Glycine
-  brand: Thorne
-  serving-size: 3
-  consumption-unit: pill
+  brand: BulkSupplements
+  serving-size: 1
+  consumption-unit: teaspoon
   consumption-grams: 3
   calories: 0
   fat: 0
@@ -1135,10 +1155,10 @@
   net-carbs: 0
   protein: 0
   price:
-    total-cost: 19
-    total-grams: 750
-  url: https://www.wholefoodsmarket.com/grocery/product/b000vyrroc
-  verified: 5/10/2026
+    total-cost: 32.97
+    total-grams: 1000
+  url: https://www.wholefoodsmarket.com/grocery/product/b00eoxu0mm
+  verified: 6/25/2026
 - name: Ham (365 Black Forest)
   food: Ham
   brand: 365 by Whole Foods Market
@@ -1184,7 +1204,8 @@
   price:
     total-cost: 31
     total-grams: 18
-  verified: 5/10/2026
+  url: https://www.amazon.com/dp/B0797BLW59
+  verified: 6/25/2026
 - name: Lamb
   food: Lamb
   brand: ButcherBox
@@ -1412,6 +1433,27 @@
     iron: 1.08
     saturated-fat: 3.5
     sugar: 1
+- name: Naked Whey Isolate (Naked Nutrition 2 LB)
+  food: Naked Whey Isolate
+  brand: Naked Nutrition
+  # Label serving is 32 g (4 tbsp x 8 g) for 120 cal / 30 g protein.
+  # A previous serving-size of 4 counted every 32 g scoop as 8
+  # servings (960 cal / 240 g protein).
+  serving-size: 32
+  consumption-unit: tablespoon
+  consumption-grams: 8
+  calories: 120
+  fat: 0
+  fiber: 0
+  net-carbs: 0
+  protein: 30
+  price:
+    total-cost: 64.99
+    total-grams: 907
+  url: https://www.amazon.com/dp/B0DJ3KYNQ5
+  verified: 6/25/2026
+  nutrients:
+    sodium: 65
 - name: Peanuts
   food: Nuts
   brand: 365 by Whole Foods Market
@@ -1730,10 +1772,10 @@
   net-carbs: 0.51
   protein: 0.58
   price:
-    total-cost: 2.49
+    total-cost: 3.39
     total-grams: 453.6
   url: https://www.wholefoodsmarket.com/grocery/product/b07814bsw2
-  verified: 3/16/22
+  verified: WF 9/5/2026
   nutrients:
     calcium: 16
     folate: 64
@@ -1858,7 +1900,8 @@
   price:
     total-cost: 18.99
     total-grams: 120
-  verified: 5/10/2026
+  url: https://www.amazon.com/dp/B07CJX4M8K
+  verified: 6/25/2026
   nutrients:
     calcium: 119
     magnesium: 71.5
@@ -2232,7 +2275,8 @@
   price:
     total-cost: 22
     total-grams: 120
-  verified: 5/10/2026
+  url: https://www.amazon.com/dp/B0016D1ROS
+  verified: 6/25/2026
 - name: Thorne Basic Nutrients 2/Day
   food: Thorne Basic Nutrients 2/Day
   brand: Thorne
@@ -2274,7 +2318,10 @@
   serving-size: 238
   consumption-unit: gram
   consumption-grams: 1
-  calories: 125
+  # 14 g fat + 51 g protein = ~330 kcal by Atwater (and matches USDA
+  # ~139 kcal/100 g raw); the previous 125 looked like a per-100g
+  # value pasted as per-serving.
+  calories: 330
   fat: 14
   fiber: 0
   net-carbs: 0

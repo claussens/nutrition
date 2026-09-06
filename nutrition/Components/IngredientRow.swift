@@ -1,13 +1,13 @@
 import SwiftUI
 
+// The adjustment-list row (name | group | amount unit). The only
+// caller is AdjustmentList; the meal page has its own MealRowView.
 struct IngredientRowHeader: View {
-    var showMacros: Bool = false
     var showGroup: Bool = false
     var showAmount: Bool = true
 
     // TODO: Figure out why these percentages vary from the data rows
     var nameWidthPercentage: Double = 0.38
-    var macroWidthPercentage: Double = 0.058
     var choiceGroupWidthPercentage: Double = 0.34
     var amountWidthPercentage: Double = 0.1
     var unitWidthPercentage: Double = 0.15
@@ -15,14 +15,7 @@ struct IngredientRowHeader: View {
     var body: some View {
         GeometryReader { geo in
             HStack(spacing: 5) {
-                Text("Ingredient").font(.caption).foregroundColor(Color.theme.blueYellow).frame(width: nameWidthPercentage * geo.size.width, alignment: .leading)
-                if showMacros {
-                    Text("Cal").font(.caption2).foregroundColor(Color.theme.blueYellow).frame(width: macroWidthPercentage * geo.size.width, alignment: .trailing)
-                    Text("Fat").font(.caption2).foregroundColor(Color.theme.blueYellow).frame(width: macroWidthPercentage * geo.size.width, alignment: .trailing)
-                    Text("Fbr").font(.caption2).foregroundColor(Color.theme.blueYellow).frame(width: macroWidthPercentage * geo.size.width, alignment: .trailing)
-                    Text("Ncb").font(.caption2).foregroundColor(Color.theme.blueYellow).frame(width: macroWidthPercentage * geo.size.width, alignment: .trailing)
-                    Text("Pro").font(.caption2).foregroundColor(Color.theme.blueYellow).frame(width: macroWidthPercentage * geo.size.width, alignment: .trailing)
-                }
+                Text("Food").font(.caption).foregroundColor(Color.theme.blueYellow).frame(width: nameWidthPercentage * geo.size.width, alignment: .leading)
 
                 if showGroup {
                     Text("Group").font(.caption).foregroundColor(Color.theme.blueYellow).frame(width: choiceGroupWidthPercentage * geo.size.width, alignment: .center)
@@ -37,22 +30,15 @@ struct IngredientRowHeader: View {
 }
 
 struct IngredientRow: View {
-    var showMacros: Bool = false
     var showGroup: Bool = false
     var showAmount: Bool = true
 
     var nameWidthPercentage: Double = 0.395
-    var macroWidthPercentage: Double = 0.062
     var choiceGroupWidthPercentage: Double = 0.36
     var amountWidthPercentage: Double = 0.1
     var unitWidthPercentage: Double = 0.15
 
     var name: String
-    var calories: Double = 0
-    var fat: Double = 0
-    var fiber: Double = 0
-    var netcarbs: Double = 0
-    var protein: Double = 0
     var group: String = ""
     var amount: Double = 0
     var consumptionUnit: Unit = Unit.gram
@@ -61,13 +47,6 @@ struct IngredientRow: View {
         GeometryReader { geo in
             HStack(spacing: 5) {
                 Text(name).font(.callout).frame(width: nameWidthPercentage * geo.size.width, alignment: .leading)
-                if showMacros {
-                    Text("\(calories.formattedString(0))").font(.caption2).frame(width: macroWidthPercentage * geo.size.width, alignment: .trailing)
-                    Text("\(fat.formattedString(0))").font(.caption2).frame(width: macroWidthPercentage * geo.size.width, alignment: .trailing)
-                    Text("\(fiber.formattedString(0))").font(.caption2).frame(width: macroWidthPercentage * geo.size.width, alignment: .trailing)
-                    Text("\(netcarbs.formattedString(0))").font(.caption2).frame(width: macroWidthPercentage * geo.size.width, alignment: .trailing)
-                    Text("\(protein.formattedString(0))").font(.caption2).frame(width: macroWidthPercentage * geo.size.width, alignment: .trailing)
-                }
 
                 if showGroup {
                     Text("\(group)").font(.caption).frame(width: choiceGroupWidthPercentage * geo.size.width, alignment: .center)

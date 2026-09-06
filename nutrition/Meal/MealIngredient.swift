@@ -19,7 +19,6 @@ enum Constants {
     static let Done: Int = 5
 
     static let Ingredient: Int = 2
-    static let Inactive: Int = 3
     static let Active: Int = 4
 }
 
@@ -84,12 +83,16 @@ class MealIngredientMgr: ObservableObject {
 
 
     // Shared init/reload body. If the profile has saved (user-edited)
-    // meal data, load it so edits persist between launches. Otherwise
-    // (first run / fresh profile — or a corrupt blob, which the store
-    // has backed up and logged) seed the meals from ConfigStore.
+    // meal data, load it so edits persist between launches — a saved
+    // EMPTY meal stays empty; the user removed every row on purpose.
+    // Otherwise (first run / fresh profile — or a corrupt blob, which
+    // the store has backed up and logged) seed the meals from ConfigStore.
     private func loadOrSeed() {
-        self.mealIngredients = store.load() ?? []
-        if mealIngredients.isEmpty { resetMealIngredients() }
+        if let saved = store.load() {
+            self.mealIngredients = saved
+        } else {
+            resetMealIngredients()
+        }
     }
 
 
@@ -329,17 +332,6 @@ class MealIngredientMgr: ObservableObject {
     }
 
 
-    // Return every present meal ingredient. A meal is exactly the
-    // rows that are present (the active/inactive concept was
-    // removed). Supplements always render at the very bottom; within
-    // each group the original insertion order is preserved since
-    // filter is stable.
-    func getAllMealIngredients() -> [MealIngredient] {
-        return mealIngredients.filter { !$0.isSupplement }
-             + mealIngredients.filter { $0.isSupplement }
-    }
-
-
     // Return all the meal ingredient names
     func getNames() -> [String] {
         return mealIngredients.map { $0.name }
@@ -380,11 +372,6 @@ class MealIngredientMgr: ObservableObject {
     }
 
 
-    func move(from: IndexSet, to: Int) {
-        mealIngredients.move(fromOffsets: from, toOffset: to)
-    }
-
-
     func deleteSet(indexSet: IndexSet) {
         mealIngredients.remove(atOffsets: indexSet)
     }
@@ -395,15 +382,6 @@ class MealIngredientMgr: ObservableObject {
             mealIngredients.remove(at: index)
         }
     }
-
-
-    //    func resetAmountAll() {
-    //        for mealIngredient in mealIngredients {
-    //            if let index = mealIngredients.firstIndex(where: { $0.name == mealIngredient.name }) {
-    //                mealIngredients[index] = mealIngredients[index].resetAmountToDefaultAmount()
-    //            }
-    //        }
-    //    }
 }
 
 

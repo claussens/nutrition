@@ -112,9 +112,8 @@ struct DayLogRow: View {
 }
 
 
-// Numeric trend block (oldest → newest deltas). Replaces charts on
-// the iOS 15 target; gives weight / calories / cost / protein
-// movement at a glance.
+// Numeric trend block (oldest → newest deltas): weight / calories /
+// cost / protein movement at a glance, beneath the charts.
 struct TrendSummary: View {
     let logs: [DayLog]   // newest first
 
@@ -191,7 +190,7 @@ struct TrendSummary: View {
 
 
 // Swift Charts trends over the logged days (chronological,
-// oldest → newest). Requires iOS 16+ (project now targets 16.0).
+// oldest → newest).
 struct TrendCharts: View {
     let logs: [DayLog]            // any order
 

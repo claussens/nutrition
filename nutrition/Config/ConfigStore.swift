@@ -84,6 +84,10 @@ final class ConfigStore: ObservableObject {
             data = parsed
         } catch {
             print("ConfigStore.loadInitial: cached config rejected (\(error)); falling back to the bundled seed.")
+            // The shas describe a cache we just refused to use. Left in
+            // place, the next refresh would compare equal, report "Up to
+            // date", and leave the app on the bundled seed forever.
+            saveShas([:])
             do {
                 let parsed = try parse(bundledSectionTexts())
                 let violations = ConfigSync.validate(parsed)
@@ -391,8 +395,6 @@ final class ConfigStore: ObservableObject {
         dict["id"]        = UUID().uuidString
         dict["name"]      = ci.name
         dict["brand"]     = ci.brand ?? ""
-        dict["fullName"]  = ""
-        dict["category"]  = ""
         dict["foodName"]  = ci.food
         dict["url"]       = ci.url ?? ""
         dict["verified"]  = ci.verified ?? ""
@@ -400,11 +402,6 @@ final class ConfigStore: ObservableObject {
         // --- price ---
         dict["totalCost"]  = ci.price?.totalCost ?? 0
         dict["totalGrams"] = ci.price?.totalGrams ?? 0
-
-        // --- collections ---
-        dict["ingredients"]     = [String]()
-        dict["allergens"]       = [String]()
-        dict["mealAdjustments"] = [Any]()
 
         // --- core macros (top-level config fields) ---
         dict["servingSize"] = ci.servingSize ?? 0
@@ -423,13 +420,9 @@ final class ConfigStore: ObservableObject {
         // Unit's synthesized Codable shape: an empty object under the case name.
         dict["consumptionUnit"]  = [unitRaw: [String: Any]()]
         dict["consumptionGrams"] = ci.consumptionGrams ?? 1
-        dict["meatAmount"]       = 0
         dict["stepAmount"]       = 0
         dict["defaultAmount"]    = 0
-
-        // --- flags ---
-        dict["microNutrients"] = false
-        dict["foodActive"]     = true
+        dict["foodActive"]       = true
 
         return dict
     }

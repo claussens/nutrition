@@ -19,11 +19,11 @@
 # Credentials reach the app two ways (either works): as launch args, AND as
 # SIMCTL_CHILD_* env vars injected into the launched process.
 #
-#   Override the device for a one-off:  SIM_DEVICE="iPhone 16 Pro" scripts/sim.sh run
+#   Override the device for a one-off:  SIM_DEVICE="iPhone 17 Pro" scripts/sim.sh run
 set -euo pipefail
 
 # ── Per-app identity (the ONLY lines that differ between apps) ────────────────
-DEVICE="${SIM_DEVICE:-iPhone 16 Pro Max}"
+DEVICE="${SIM_DEVICE:-iPhone 17 Pro Max}"
 APP_ID="com.claussen.nutrition"
 SCHEME="nutrition"
 PROJECT="nutrition.xcodeproj"

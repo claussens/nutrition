@@ -80,16 +80,9 @@ struct IngredientList: View {
                 HStack(spacing: 0) {
                     // Name + tiny brand subtext.
                     VStack(alignment: .leading, spacing: 1) {
-                        HStack(spacing: 4) {
-                            Text(displayName(ingredient))
-                              .font(.callout)
-                              .foregroundColor(statusColor(for: ingredient))
-                            if AvoidList.firstMatch(in: ingredient.ingredients) != nil {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                  .font(.caption2)
-                                  .foregroundColor(.orange)
-                            }
-                        }
+                        Text(displayName(ingredient))
+                          .font(.callout)
+                          .foregroundColor(statusColor(for: ingredient))
                         if !ingredient.brand.isEmpty {
                             Text(ingredient.brand)
                               .font(.caption2)
@@ -431,13 +424,6 @@ struct IngredientList: View {
         if prepMode == .ingredient { return ing.name }
         return ing.foodName.isEmpty ? ing.name : ing.foodName
     }
-
-    // The meal-list key: a grouped ingredient is tracked in the meal
-    // under its GROUP name (MealIngredient.name == group name).
-    private func mealKey(_ ing: Ingredient) -> String {
-        ing.foodName.isEmpty ? ing.name : ing.foodName
-    }
-
 
     // Prep page color: green when this Food/ingredient is active in
     // the repertoire (its Ingredient.foodActive flag is on — the

@@ -247,35 +247,6 @@ class ProfileMgr: ObservableObject {
     }
 
 
-    // Set / clear this profile's per-Food default amount. amount > 0
-    // sets an override; <= 0 removes it so the Ingredient/Food-level
-    // fallback applies again. Reassigning `profile` triggers didSet
-    // which mirrors into `profiles` and persists.
-    func setDefault(foodName: String, amount: Double) {
-        var p = profile
-        if amount > 0 {
-            p.defaults[foodName] = amount
-        } else {
-            p.defaults.removeValue(forKey: foodName)
-        }
-        profile = p
-    }
-
-
-    // Set / clear this profile's preferred variant for a Food.
-    // ingredientName empty/nil removes the override so the Food's
-    // global currentIngredientName applies again.
-    func setFoodMember(foodName: String, ingredientName: String?) {
-        var p = profile
-        if let name = ingredientName, !name.isEmpty {
-            p.foodMember[foodName] = name
-        } else {
-            p.foodMember.removeValue(forKey: foodName)
-        }
-        profile = p
-    }
-
-
     // Force a persist now. With the single-source-of-truth model, every
     // edit to `profile` already wrote into `profiles` (which writes JSON
     // via its didSet) and `activeProfileId` already persisted via its
@@ -361,14 +332,6 @@ enum BMREquation: String, ValueType, Identifiable {
         switch self {
         case .mifflinStJeor: return "Mifflin-St Jeor"
         case .schofield:     return "Schofield (age-banded)"
-        }
-    }
-
-    // One-line subtitle for the picker / about row.
-    var subtitle: String {
-        switch self {
-        case .mifflinStJeor: return "Adult general-population equation (derived on ages 19–78)."
-        case .schofield:     return "FAO/WHO age-banded equation; the pediatric-dietetics choice for under-18s."
         }
     }
 

@@ -17,8 +17,11 @@ class DayLogMgr: ObservableObject {
 
 
     // Documents/daylog.json — chosen over UserDefaults because the
-    // history grows without bound.
-    private static var fileURL: URL {
+    // history grows without bound. Injectable so a test can point the
+    // manager at a scratch file instead of the real history.
+    private let fileURL: URL
+
+    static var defaultFileURL: URL {
         let docs = FileManager.default.urls(for: .documentDirectory,
                                             in: .userDomainMask)[0]
         return docs.appendingPathComponent("daylog.json")
@@ -41,14 +44,26 @@ class DayLogMgr: ObservableObject {
     }
 
 
-    init(activeProfileId: String) {
-        if let data = try? Data(contentsOf: DayLogMgr.fileURL),
-           let logs = try? JSONDecoder().decode([DayLog].self, from: data) {
-            self.logs = logs.sorted { $0.date > $1.date }
-            migrateLegacyLogs(to: activeProfileId)
+    // A file that exists but does not decode is moved aside to
+    // daylog.corrupt.json before the manager starts empty; otherwise the
+    // next Log Today would overwrite the whole history with one entry.
+    init(activeProfileId: String, fileURL: URL = DayLogMgr.defaultFileURL) {
+        self.fileURL = fileURL
+        guard let data = try? Data(contentsOf: fileURL) else {
+            self.logs = []
             return
         }
-        self.logs = []
+        do {
+            let logs = try JSONDecoder().decode([DayLog].self, from: data)
+            self.logs = logs.sorted { $0.date > $1.date }
+            migrateLegacyLogs(to: activeProfileId)
+        } catch {
+            let backup = fileURL.deletingPathExtension().appendingPathExtension("corrupt.json")
+            try? FileManager.default.removeItem(at: backup)
+            try? FileManager.default.moveItem(at: fileURL, to: backup)
+            print("DayLogMgr: FAILED to decode \(fileURL.lastPathComponent): \(error); moved to \(backup.lastPathComponent)")
+            self.logs = []
+        }
     }
 
 
@@ -106,7 +121,7 @@ class DayLogMgr: ObservableObject {
             return
         }
         do {
-            try data.write(to: DayLogMgr.fileURL, options: .atomic)
+            try data.write(to: fileURL, options: .atomic)
         } catch {
             print("Failed to write day log history: \(error)")
         }

@@ -135,15 +135,6 @@ class AdjustmentMgr: ObservableObject {
     }
 
 
-    func activate(_ name: String) {
-        if let index = adjustments.firstIndex(where: { $0.name == name }) {
-            if !adjustments[index].active {
-                adjustments[index] = adjustments[index].toggleActive()
-            }
-        }
-    }
-
-
     func deactivate(_ name: String) {
         if let index = adjustments.firstIndex(where: { $0.name == name }) {
             if adjustments[index].active {
@@ -159,12 +150,10 @@ class AdjustmentMgr: ObservableObject {
     }
 
 
-    func toggleActive(_ adjustment: Adjustment) -> Adjustment? {
+    func toggleActive(_ adjustment: Adjustment) {
         if let index = adjustments.firstIndex(where: { $0.id == adjustment.id }) {
             adjustments[index] = adjustment.toggleActive()
-            return adjustments[index]
         }
-        return nil
     }
 
 
@@ -181,30 +170,6 @@ class AdjustmentMgr: ObservableObject {
     func delete(_ adjustment: Adjustment) {
         if let index = adjustments.firstIndex(where: { $0.id == adjustment.id }) {
             adjustments.remove(at: index)
-        }
-    }
-
-
-    // Create or update an auto-adjust rule for the named ingredient.
-    // `maximum == nil` means "no cap" (constraints=false). Always
-    // creates rules in the active state and without a group.
-    func setAuto(name: String, amount: Double, maximum: Double?) {
-        let constraints = maximum != nil
-        let max = maximum ?? 0
-        if let idx = adjustments.firstIndex(where: { $0.name == name }) {
-            let existing = adjustments[idx]
-            adjustments[idx] = Adjustment(id: existing.id, name: name, amount: amount, group: existing.group, constraints: constraints, maximum: max, active: true)
-        } else {
-            adjustments.append(Adjustment(name: name, amount: amount, group: "", constraints: constraints, maximum: max, active: true))
-        }
-    }
-
-
-    // Remove the auto-adjust rule for the named ingredient. No-op
-    // if none exists.
-    func clearAuto(name: String) {
-        if let idx = adjustments.firstIndex(where: { $0.name == name }) {
-            adjustments.remove(at: idx)
         }
     }
 }

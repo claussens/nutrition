@@ -6,7 +6,6 @@ extension Color {
 }
 
 struct ColorTheme {
-    let automatic = Color("Automatic")
     let blackWhite = Color("BlackWhite")
     let blackWhiteSecondary = Color("BlackWhiteSecondary")
     let blueYellow = Color("BlueYellow")
@@ -18,5 +17,4 @@ struct ColorTheme {
     let green = Color("Green")
     let yellow = Color("Yellow")
     let red = Color("Red")
-    let secondaryText = Color("SecondaryTextColor")
 }

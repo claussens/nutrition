@@ -304,8 +304,15 @@ vitamin-d:
     - { max-age: 1,    male: 400, female: 400 }
     - { max-age: 70,   male: 600, female: 600 }
     - { max-age: .inf, male: 800, female: 800 }
+  # NIH UL (total intake): 25 mcg (1000 IU) 0-6mo, 38 mcg (1500 IU)
+  # 7-12mo, 63 mcg (2500 IU) 1-3y, 75 mcg (3000 IU) 4-8y,
+  # 100 mcg (4000 IU) 9+. Was previously 0 (no warning ever fired).
   max:
-    - { max-age: .inf, male: 0, female: 0 }
+    - { max-age: 0.5,  male: 1000, female: 1000 }
+    - { max-age: 1,    male: 1500, female: 1500 }
+    - { max-age: 3,    male: 2500, female: 2500 }
+    - { max-age: 8,    male: 3000, female: 3000 }
+    - { max-age: .inf, male: 4000, female: 4000 }
 
 vitamin-e:
   unit: mg
