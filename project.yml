@@ -100,6 +100,68 @@ targets:
         # fill in the profile. The app writes nothing to HealthKit, so there
         # is no NSHealthUpdateUsageDescription.
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Nutrition reads your weight, body fat percentage and active energy from Health to set your daily calorie and macro goals."
+        # ── The Mac (Mac Catalyst), added 2026-09-06 ───────────────────
+        # The same target, one more destination — not a second target and not
+        # an AppKit fork. It can be that small because the UI is all SwiftUI
+        # and the only three UIKit call sites in the tree
+        # (UIApplication.resignFirstResponder in Extensions/View.swift,
+        # UIColor.systemGroupedBackground in MealList, UIScreen.main.bounds in
+        # IngredientList) all exist under Catalyst, so not one `#if os` was
+        # needed. Catalyst rather than "Designed for iPad" because only
+        # Catalyst produces a real Mac bundle that copies to /Applications and
+        # launches from the Dock with Xcode quit; a "Designed for iPad" product
+        # is an iOS Mach-O macOS re-stages in a temp Wrapper/ per launch, so
+        # there is nothing stable to install. Pattern lifted from swish, which
+        # did this first on 2026-07-28 and paid for the findings.
+        #
+        # Written as an explicit setting rather than XcodeGen's
+        # `supportedDestinations: [iOS, macCatalyst]`: 2.46.0's two destination
+        # presets write DIRECTLY CONFLICTING values for the two Mac keys
+        # (iOS.yml says SUPPORTS_MACCATALYST NO + DESIGNED_FOR_IPHONE_IPAD YES,
+        # macCatalyst.yml the exact inverse), so the outcome depends on merge
+        # order. An explicit target setting always wins.
+        SUPPORTS_MACCATALYST: YES
+        # Off so there is exactly ONE macOS row in -showdestinations and a
+        # bare `-destination platform=macOS` is unambiguous. Nothing is lost:
+        # a "Designed for iPad" build cannot be installed anyway.
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        # The Mac app keeps `com.claussen.nutrition` rather than becoming
+        # `maccatalyst.com.claussen.nutrition`. That id is what names the
+        # UserDefaults suite every manager persists through (UserDefaultsStore,
+        # keys `profiles` / `activeProfileId` / `mealIngredient.<profileId>`),
+        # so a derived id would silently give the Mac its own empty store.
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
+        # Mac-only entitlements, and the interesting half is what they DROP:
+        # HealthKit. The `[sdk=macosx*]` condition matches only the Catalyst
+        # (iosmac) variant of the macOS SDK, so no phone or simulator build
+        # ever reads this line and the iOS entitlement is untouched.
+        #
+        # Two reasons, and the first alone settles it. HealthKit is a
+        # profile-backed entitlement: naming it forces automatic signing to
+        # mint a Mac Catalyst development profile, which needs an Apple ID
+        # signed into Xcode — this machine has none, and the build fails at
+        # GatherProvisioningInputs with "No Accounts: Add a new account in
+        # Accounts settings." Drop the entitlement and Xcode signs the macOS
+        # product with the bare "Apple Development" certificate, no profile
+        # involved. Second: it would buy nothing. There is no Health app on
+        # macOS, HKHealthStore.isHealthDataAvailable() is false there, and
+        # HealthStore.authorizeHealthKit already guards on exactly that — so
+        # the Mac quietly falls back to the manually entered weight and body
+        # fat percentage, which is the same path a phone with Health toggled
+        # off takes.
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": Signing/nutrition-macCatalyst.entitlements
+        # App Sandbox OFF on the Mac. It is not a Catalyst default — Xcode's
+        # injected base entitlements never include it, and XcodeGen never runs
+        # the target template that otherwise adds it — so this is a choice,
+        # made because distribution is personal (built and installed locally,
+        # no Mac App Store, no notarization) and a sandbox would need
+        # network.client added back for ConfigSync's GitHub fetch, which is
+        # the app's only remote dependency and fails SILENTLY without it.
+        "ENABLE_APP_SANDBOX[sdk=macosx*]": NO
+        # No MACOSX_DEPLOYMENT_TARGET, deliberately: the Catalyst SDK variant
+        # declares IPHONEOS_DEPLOYMENT_TARGET as its deployment-target setting,
+        # which the project already pins at 16.0, so the macOS key would be
+        # inert and misleading.
         LD_RUNPATH_SEARCH_PATHS:
           - "$(inherited)"
           - "@executable_path/Frameworks"

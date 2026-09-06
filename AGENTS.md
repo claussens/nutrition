@@ -33,6 +33,31 @@ product is `Nutrition.app`, and the app declares HealthKit, so it signs with
 the app-specific provisioning profile, which must contain the phone's UDID.
 The skill has the failure text and the fix.
 
+## The Mac
+
+The same app also runs on the Mac as a Mac Catalyst build — one more
+destination on the one target, no second target and no forked code. Install
+it the way the phone gets installed:
+
+```sh
+scripts/mac-install.sh          # Release build -> /Applications/Nutrition.app
+open -a Nutrition
+```
+
+Two things to know before touching it. Every Mac `xcodebuild` must spell
+`-destination 'platform=macOS,variant=Mac Catalyst'` and use
+`-derivedDataPath build/DDcat` — sharing `build/DD` with the phone build
+deadlocks both on "database is locked". And the Mac signs with the bare
+"Apple Development" certificate and NO provisioning profile, which only
+works because `Signing/nutrition-macCatalyst.entitlements` is empty:
+HealthKit is profile-backed, no Apple ID is signed into Xcode on this
+machine, so naming it would fail the build at GatherProvisioningInputs with
+"No Accounts". Nothing is lost — macOS has no Health app,
+`isHealthDataAvailable()` is false, and `HealthStore.authorizeHealthKit`
+already guards on it, so the Mac uses the manually entered weight and body
+fat percentage. Re-adding HealthKit to the Mac side is what breaks the
+build; `project.yml` carries the full argument.
+
 ## Code conventions
 
 - Functions top-down: main first, helpers after.

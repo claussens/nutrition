@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Mac Catalyst ONLY. project.yml wires this in behind
+	     CODE_SIGN_ENTITLEMENTS[sdk=macosx*], so no phone or simulator build
+	     ever reads it and nutrition/nutrition.entitlements stays the iOS
+	     answer, HealthKit and all.
+
+	     It is EMPTY, and that is the entire point. The iOS file claims
+	     com.apple.developer.healthkit, which is profile-backed: name it on a
+	     macOS product and automatic signing has to mint a Mac Catalyst
+	     development profile, which needs an Apple ID signed into Xcode. This
+	     machine has none, so the build dies at GatherProvisioningInputs with
+	     "No Accounts: Add a new account in Accounts settings." With nothing
+	     profile-backed here, Xcode signs with the bare "Apple Development"
+	     certificate and the build just works.
+
+	     Nothing is lost. macOS has no Health app, isHealthDataAvailable() is
+	     false, and HealthStore.authorizeHealthKit guards on it — so the Mac
+	     uses the manually entered weight and body fat percentage, exactly as
+	     a phone with those toggles off does.
+
+	     It lives outside nutrition/ on purpose: the target's `sources:` sweep
+	     would otherwise turn it into a stray file reference in the project,
+	     and CODE_SIGN_ENTITLEMENTS resolves against SRCROOT and needs no
+	     reference at all.
+
+	     Deliberately NO com.apple.security.app-sandbox — project.yml carries
+	     the argument for leaving the sandbox off. -->
+</dict>
+</plist>
