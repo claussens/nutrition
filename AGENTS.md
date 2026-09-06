@@ -77,3 +77,12 @@ capsule supplements `consumptionGrams` is grams per pill, so
 **Never use sale prices.** Seed `totalCost` is the regular price. Whole Foods
 exposes both: regular is `offerDetails.price.basisPriceAmount` when on sale,
 else `priceAmount`. Reading a page by hand, take the crossed-out figure.
+
+## Credentials
+
+ASC keys (`ASC_KEY_ID` / `ASC_ISSUER_ID`) live in 1Password, never in `~/.env`
+or a shell rc. `scripts/testflight.sh` re-execs itself under
+`op run --env-file=$HOME/.config/op/env/asc.env` when they are unset, or run
+`with-asc ./scripts/testflight.sh`. Never restore `source ~/.env` for ASC,
+never commit a key, never paste one into chat. The full house policy is the
+"API keys" section of `~/src/AGENTS.md`.
