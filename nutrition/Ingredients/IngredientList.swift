@@ -4,17 +4,13 @@ struct IngredientList: View {
 
     @EnvironmentObject var ingredientMgr: IngredientMgr
     @EnvironmentObject var mealIngredientMgr: MealIngredientMgr
-    @EnvironmentObject var adjustmentMgr: AdjustmentMgr
     @EnvironmentObject var foodMgr: FoodMgr
     @EnvironmentObject var foodCompositeMgr: FoodCompositeMgr
 
-    @State var deleteMealIngredientAlert = false
-    @State var deleteAdjustmentAlert = false
-
-    // Non-nil drives the hidden background NavigationLink that pushes
-    // IngredientEdit. Set by tapping the chevron on a row; cleared
-    // when the editor screen is dismissed.
-    @State private var editIngredient: Ingredient? = nil
+    // Pull-to-refresh outcome (config refresh from nutrition-config).
+    // Same Feedback the hamburger "Refresh data" item shows.
+    @State private var refreshFeedback: ConfigSync.Feedback? = nil
+    @State private var showTokenSheet = false
 
     // Prep list granularity.
     //   .composite  — list FoodComposites (PB&J, Wrap, …) + create
@@ -44,11 +40,12 @@ struct IngredientList: View {
     //
     // Recompute triggers:
     //   * prepMode / sortBy        — @State, observed directly
-    //   * ingredientMgr.ingredients — observed via .count (add/delete)
-    //   * .onAppear                 — catches in-place edits made on the
-    //                                 pushed IngredientEdit screen, and
-    //                                 the foodMgr grouping data, which
-    //                                 aren't both observable from here.
+    //   * ingredientMgr.ingredients — observed via .count
+    //   * a pull-to-refresh that applied new config
+    //   * .onAppear                 — catches a refresh run from the
+    //                                 Meal tab's menu, and the foodMgr
+    //                                 grouping data, which aren't
+    //                                 observable from here.
     @State private var rows: [Ingredient] = []
 
     // Non-nil while the new-composite builder sheet is shown.
@@ -56,56 +53,6 @@ struct IngredientList: View {
 
     // Non-nil while editing an existing composite (chevron tapped).
     @State private var editComposite: FoodComposite? = nil
-
-    // Drives the hidden NavigationLink that pushes IngredientAdd when
-    // the toolbar "Add" is tapped in Food / Ingredient mode.
-    @State private var showAdd = false
-
-    // ============================================================
-    // Scanner state. The toolbar camera button presents
-    // LabelCaptureSheet; on completion it hands back a ScanRoute
-    // that we stash into one of these state vars to drive the
-    // appropriate navigation:
-    //   * .new(parsed)         -> showAddPrefilled = parsed
-    //   * .update(...)         -> showEditPrefilled = (existing,parsed,diff)
-    //   * .chooser(...)        -> chooserPayload = (parsed,candidates)
-    // We keep them as separate optionals so each navigation /
-    // sheet binding stays simple and self-contained.
-    // ============================================================
-    @State private var showCaptureSheet = false
-
-    // Drives the hidden NavigationLink that pushes the all-items
-    // "Verify All" web-refresh sweep.
-    @State private var showVerifyAll = false
-
-    @State private var addPrefill: ParsedIngredient? = nil
-    @State private var editPrefillBundle: EditPrefillBundle? = nil
-    @State private var chooserPayload: ChooserPayload? = nil
-
-    // Pull the navigation flag off Identifiable Optionals so the
-    // hidden NavigationLink Bindings stay readable.
-    private var addPrefillActive: Binding<Bool> {
-        Binding(get: { addPrefill != nil },
-                set: { if !$0 { addPrefill = nil } })
-    }
-    private var editPrefillActive: Binding<Bool> {
-        Binding(get: { editPrefillBundle != nil },
-                set: { if !$0 { editPrefillBundle = nil } })
-    }
-
-
-    // Wrappers so we can drive a navigation Binding<Bool> without
-    // losing the payload. (Tuples aren't Identifiable, structs are.)
-    struct EditPrefillBundle {
-        let existing: Ingredient
-        let parsed: ParsedIngredient
-        let diff: ScanDiff
-    }
-    struct ChooserPayload: Identifiable {
-        let parsed: ParsedIngredient
-        let candidates: [Ingredient]
-        var id: String { parsed.name }
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -125,22 +72,13 @@ struct IngredientList: View {
                 compositeSection
             } else {
             ForEach(rows) { ingredient in
-                // Row is split between two hit zones, each wrapped in
-                // a Button with .buttonStyle(.borderless) so the List
-                // row doesn't lump them into a single tappable unit:
-                //   * Name Button — taps toggle the ingredient in/out
-                //     of the meal (black <-> green).
-                //   * trailing chevron Button — pushes IngredientEdit
-                //     via the hidden NavigationLink in .background.
-                // Explicit .frame(height: 28) on the HStack keeps the
-                // row from collapsing — IngredientRow's inner
-                // GeometryReader has no intrinsic height, so without
-                // this the row would shrink to chevron-sized.
+                // Ingredient data is read-only in the app (authored in
+                // nutrition-config); the row's only action is the tap
+                // that toggles the ingredient as an active member of
+                // its Food (green) vs inactive (black). Explicit
+                // .frame(height: 28) keeps the row from collapsing.
                 HStack(spacing: 0) {
-                    // Name + tiny brand subtext. TAP opens the
-                    // details/edit page; LONG-PRESS toggles whether
-                    // this ingredient is an active member of its Food
-                    // (green) vs inactive (black) — the old tap action.
+                    // Name + tiny brand subtext.
                     VStack(alignment: .leading, spacing: 1) {
                         HStack(spacing: 4) {
                             Text(displayName(ingredient))
@@ -160,8 +98,7 @@ struct IngredientList: View {
                     }
                       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                       .contentShape(Rectangle())
-                      .onTapGesture { editIngredient = ingredient }
-                      .onLongPressGesture { toggleFoodActive(ingredient) }
+                      .onTapGesture { toggleFoodActive(ingredient) }
 
                     // Far-right value of whatever metric we're sorted
                     // by (none when sorted by name/category).
@@ -175,32 +112,8 @@ struct IngredientList: View {
                           .layoutPriority(1)
                           .padding(.trailing, 6)
                     }
-
-                    Button {
-                        editIngredient = ingredient
-                    } label: {
-                        Image(systemName: "chevron.right")
-                          .font(.caption2)
-                          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                          .contentShape(Rectangle())
-                    }
-                      .buttonStyle(.borderless)
-                      .foregroundColor(Color.theme.blackWhiteSecondary)
-                      .frame(width: 30)
                 }
                   .frame(height: 28)
-
-                  .swipeActions(edge: .trailing) {
-                      // Delete from the database entirely. (Removing a
-                      // Food from the meal is done on the Meal page;
-                      // this page only manages the database + the
-                      // repertoire-active flag via long-press.)
-                      Button(role: .destructive) {
-                          delete(ingredient)
-                      } label: {
-                          Label("Delete", systemImage: "trash.fill")
-                      }
-                  }
             }
               .listRowInsets(EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10))
             }
@@ -221,20 +134,33 @@ struct IngredientList: View {
               .onChange(of: ingredientMgr.ingredients.count) { _ in
                   rows = getIngredientList()
               }
+              // Pull down to fetch nutrition-config from GitHub. The
+              // managers reload themselves when ConfigStore applies,
+              // so only the memoized rows need a nudge here.
+              .refreshable {
+                  let f = await ConfigSync.refreshWithFeedback()
+                  rows = getIngredientList()
+                  refreshFeedback = f
+              }
             if prepMode == .composite { Spacer() }
         }
-          .alert("The meal ingredient must be deleted first.  It may be necessary to lock the meal ingredients prior to deletion so the meal ingredient is not readded as an adjustment.", isPresented: $deleteMealIngredientAlert) {
+          .alert(refreshFeedback?.title ?? "",
+                 isPresented: Binding(get: { refreshFeedback != nil },
+                                      set: { if !$0 { refreshFeedback = nil } }),
+                 presenting: refreshFeedback) { f in
+              if f.needsToken {
+                  Button("Configure token\u{2026}") { showTokenSheet = true }
+              }
               Button("OK", role: .cancel) { }
+          } message: { f in
+              Text(f.message)
           }
-          .alert("The adjustment ingredient must be deleted first.", isPresented: $deleteAdjustmentAlert) {
-              Button("OK", role: .cancel) { }
+          .sheet(isPresented: $showTokenSheet) {
+              TokenConfigSheet()
           }
           .toolbar {
               ToolbarItem(placement: .principal) {
-                  // Centered cluster: adjustments link + the LLM
-                  // scanner. The scanner glyph is rendered 50% larger
-                  // than the others (it's the primary action on this
-                  // screen). Scanner Settings moved to Profile.
+                  // Centered cluster: adjustments link + sort menu.
                   HStack(spacing: 22) {
                       NavigationLink(destination: AdjustmentList()) {
                           Image(systemName: "slider.horizontal.3")
@@ -249,50 +175,17 @@ struct IngredientList: View {
                       } label: {
                           Image(systemName: "arrow.up.arrow.down")
                       }
-
-                      Button {
-                          showCaptureSheet = true
-                      } label: {
-                          Image(systemName: "camera.viewfinder")
-                            .font(.system(size: 24.3))
-                      }
-
-                      // All-items web-refresh sweep (Verify All).
-                      Button {
-                          showVerifyAll = true
-                      } label: {
-                          Image(systemName: "checkmark.seal")
-                      }
                   }
                     .foregroundColor(Color.theme.blueYellow)
               }
-              ToolbarItem(placement: .primaryAction) {
-                  // Add is contextual to the selected segment:
-                  //   Composite -> new-composite builder (same as the
-                  //                "New composite" row)
-                  //   Food / Ingredient -> IngredientAdd
-                  Button("Add") {
-                      if prepMode == .composite {
-                          showCompositeBuilder = true
-                      } else {
-                          showAdd = true
-                      }
+              // Composites are meal-level groupings the app still owns;
+              // foods and ingredients come from nutrition-config, so
+              // only the Composite segment gets an Add.
+              if prepMode == .composite {
+                  ToolbarItem(placement: .primaryAction) {
+                      Button("Add") { showCompositeBuilder = true }
+                        .foregroundColor(Color.theme.blueYellow)
                   }
-                    .foregroundColor(Color.theme.blueYellow)
-              }
-          }
-          // Scanner sheets — capture, then optional chooser, then
-          // routed navigation into Add or Edit prefilled.
-          .sheet(isPresented: $showCaptureSheet) {
-              LabelCaptureSheet { route in
-                  applyScanRoute(route)
-              }
-                .environmentObject(ingredientMgr)
-          }
-          .sheet(item: $chooserPayload) { payload in
-              MatchChooserSheet(parsed: payload.parsed,
-                                candidates: payload.candidates) { resolved in
-                  applyScanRoute(resolved)
               }
           }
           .sheet(isPresented: $showCompositeBuilder) {
@@ -308,66 +201,8 @@ struct IngredientList: View {
                   foodCompositeMgr.remove(name: comp.name)
               }
           }
-          // Hidden NavigationLinks that fire when scan results route
-          // to Add (with prefill) or Edit (with prefill + diff).
-          .background(
-              Group {
-                  NavigationLink(
-                      destination: IngredientAdd(),
-                      isActive: $showAdd
-                  ) { EmptyView() }
-
-                  NavigationLink(
-                      destination: Group {
-                          if let p = addPrefill { IngredientAdd(prefill: p) }
-                      },
-                      isActive: addPrefillActive
-                  ) { EmptyView() }
-
-                  NavigationLink(
-                      destination: Group {
-                          if let b = editPrefillBundle {
-                              IngredientEdit(ingredient: b.existing,
-                                             prefill: b.parsed,
-                                             diff: b.diff)
-                          }
-                      },
-                      isActive: editPrefillActive
-                  ) { EmptyView() }
-
-                  NavigationLink(
-                      destination: VerifyAllWalkthrough()
-                        .environmentObject(ingredientMgr),
-                      isActive: $showVerifyAll
-                  ) { EmptyView() }
-              }
-          )
-          // Hidden NavigationLink driven by `editIngredient`. Pattern
-          // mirrors MealList's detail navigation — gives us a
-          // chevron Button (visible) that pushes IngredientEdit
-          // (invisible link) without making the whole list row a
-          // single big NavigationLink.
-          .background(
-              NavigationLink(
-                  destination: Group {
-                      if let ing = editIngredient {
-                          IngredientEdit(ingredient: ing)
-                      }
-                  },
-                  isActive: Binding(
-                      get: { editIngredient != nil },
-                      set: { if !$0 { editIngredient = nil } }
-                  )
-              ) {
-                  EmptyView()
-              }
-          )
     }
 
-    // Collapse grouped ingredients to one row per group. The
-    // representative is the group's default member (real Ingredient,
-    // so the chevron still edits real data); the row DISPLAYS the
-    // group name and toggles the group into the meal under that name.
     // Composite mode: list FoodComposites (tap toggles into the
     // meal, like an ingredient row) plus a create entry.
     @ViewBuilder
@@ -436,6 +271,9 @@ struct IngredientList: View {
     }
 
 
+    // Collapse grouped ingredients to one row per group. The
+    // representative is the group's default member; the row DISPLAYS
+    // the group name.
     func getIngredientList() -> [Ingredient] {
         let all = ingredientMgr.getAll()
         if prepMode == .ingredient {
@@ -601,28 +439,9 @@ struct IngredientList: View {
     }
 
 
-    // ============================================================
-    // ScanRoute dispatcher — set the appropriate state var so the
-    // matching hidden NavigationLink fires (or the chooser sheet
-    // presents). Called either after the capture sheet completes,
-    // or after the user picks a candidate in the chooser.
-    // ============================================================
-    private func applyScanRoute(_ route: ScanRoute) {
-        switch route {
-        case .new(let parsed):
-            addPrefill = parsed
-        case .update(let existing, let parsed, let diff):
-            editPrefillBundle = EditPrefillBundle(
-                existing: existing, parsed: parsed, diff: diff
-            )
-        case .chooser(let parsed, let candidates):
-            chooserPayload = ChooserPayload(parsed: parsed, candidates: candidates)
-        }
-    }
-
     // Prep page color: green when this Food/ingredient is active in
     // the repertoire (its Ingredient.foodActive flag is on — the
-    // flag the long-press toggles, and the flag that gates whether
+    // flag the tap toggles, and the flag that gates whether
     // the Food appears in the Meal page's eye add-list); black
     // otherwise. Meal membership is the Meal page's concern now, not
     // this one. A collapsed Food row resolves through the Food's
@@ -642,24 +461,12 @@ struct IngredientList: View {
     }
 
 
-    // Prep long-press: flip ONLY this ingredient's repertoire-active
+    // Prep tap: flip ONLY this ingredient's repertoire-active
     // (foodActive) flag. It does NOT add or remove a meal row —
     // adding a Food to the meal is the Meal page's eye affordance.
     private func toggleFoodActive(_ ingredient: Ingredient) {
         ingredientMgr.toggleFoodActive(name: ingredient.name)
-    }
-
-
-    func delete(_ ingredient: Ingredient) {
-        if mealIngredientMgr.getByName(name: ingredient.name) != nil {
-            deleteMealIngredientAlert = true
-            return
-        }
-        if adjustmentMgr.getByName(name: ingredient.name) != nil {
-            deleteAdjustmentAlert = true
-            return
-        }
-        ingredientMgr.delete(ingredient)
+        rows = getIngredientList()
     }
 }
 

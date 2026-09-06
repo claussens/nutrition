@@ -5,13 +5,8 @@ import SwiftUI
 // Personal Access Token used by ConfigSync to pull the
 // nutrition-config repo.
 //
-// Mirrors SettingsView's UX for the Anthropic key: a Form with
-// a SecureField, a Keychain-backed credential, and Cancel/Save
-// toolbar buttons tinted with Color.theme.blueYellow.
-//
-// We deliberately store the GitHub PAT under a distinct Keychain
-// account ("github-pat") so it lives alongside — not on top of —
-// the Anthropic key.
+// A Form with a SecureField, a Keychain-backed credential, and
+// Cancel/Save toolbar buttons tinted with Color.theme.blueYellow.
 // ============================================================
 struct TokenConfigSheet: View {
 

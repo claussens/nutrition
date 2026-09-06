@@ -93,9 +93,6 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-        # Label-scanning flow: camera capture and photo-library pick.
-        INFOPLIST_KEY_NSCameraUsageDescription: "Take photos of nutrition labels to add or update ingredients."
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Pick existing photos of nutrition labels to add or update ingredients."
         # HealthStore.swift reads/writes workout data.
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Your workout related data will be used to display your saved workouts in MyWorkouts."
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Workouts tracked by MyWorkouts on Apple Watch will be saved to HealthKit."

@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 
 // An ingredient group / variant set. The group (e.g. "Eggs") is
@@ -59,15 +60,26 @@ struct Food: Codable, Identifiable, Equatable {
 class FoodMgr: ObservableObject {
 
     // Config-owned, exactly like IngredientMgr — the config is the
-    // source of truth and is rebuilt every launch. Each entry is a
-    // food and its current (default) member ingredient. Runtime
-    // changes (ensure / setCurrent) are session-scoped; there is no
-    // UserDefaults persistence.
+    // source of truth, loaded at launch and replaced wholesale when
+    // ConfigSync applies a refresh. Each entry is a food and its
+    // current (default) member ingredient. Runtime changes (ensure /
+    // setCurrent) are session-scoped; there is no UserDefaults
+    // persistence.
     @Published var foods: [Food] = []
+
+    private var configSubscription: AnyCancellable?
 
 
     init() {
         self.foods = ConfigStore.shared.runtimeFoods()
+        // @Published emits on willSet, so map the emitted value rather
+        // than re-reading ConfigStore.shared.data (still the old set).
+        configSubscription = ConfigStore.shared.$data
+            .dropFirst()
+            .compactMap { $0 }
+            .sink { [weak self] data in
+                self?.foods = ConfigStore.shared.runtimeFoods(from: data)
+            }
     }
 
 

@@ -42,7 +42,7 @@ enum ConfigSyncError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingToken:
-            return "No GitHub access token is configured. Add a personal access token in Settings."
+            return "No GitHub token is configured. Open the menu and choose Configure GitHub token."
         case .network(let underlying):
             return "Network error while syncing config: \(underlying.localizedDescription)"
         case .notFound(let file):
@@ -144,6 +144,49 @@ enum ConfigSync {
         }
 
         return .applied(summary: summary(for: data))
+    }
+
+    // ------------------------------------------------------------------------
+    // User-facing outcome
+    // ------------------------------------------------------------------------
+
+    /// What a refresh entry point shows the user afterwards. Both the
+    /// hamburger "Refresh data" item and the Prep tab's pull-to-refresh go
+    /// through `refreshWithFeedback()` so their wording cannot drift.
+    struct Feedback: Identifiable {
+        let id = UUID()
+        let title: String
+        let message: String
+        /// True when the refresh could not even start for lack of a token;
+        /// the caller can offer the token sheet directly.
+        let needsToken: Bool
+    }
+
+    /// `refresh()` plus the outcome rendered for an alert. Never throws.
+    static func refreshWithFeedback() async -> Feedback {
+        do {
+            switch try await refresh() {
+            case .applied(let summary):
+                return Feedback(title: "Refresh complete", message: summary, needsToken: false)
+            case .upToDate:
+                return Feedback(title: "Up to date", message: "Already up to date.", needsToken: false)
+            }
+        } catch ConfigSyncError.missingToken {
+            return Feedback(title: "No GitHub token",
+                            message: ConfigSyncError.missingToken.localizedDescription,
+                            needsToken: true)
+        } catch ConfigSyncError.referenceErrors(let problems) {
+            // Dangling references are what the user must fix in
+            // nutrition-config, so list them one per line.
+            let list = problems.map { "\u{2022} \($0)" }.joined(separator: "\n")
+            return Feedback(title: "Refresh failed",
+                            message: "Unresolved references in nutrition-config:\n\(list)",
+                            needsToken: false)
+        } catch {
+            return Feedback(title: "Refresh failed",
+                            message: error.localizedDescription,
+                            needsToken: false)
+        }
     }
 
     // ------------------------------------------------------------------------

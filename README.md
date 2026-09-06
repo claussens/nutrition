@@ -29,16 +29,12 @@ nutrition/app.swift
 - Ingredient search bar using crypto pattern
 - Colors using crypto pattern
 - API using crypto pattern
-- EAN scanner
-  curl https://world.openfoodfacts.org/api/v0/product/0829696000800.json
-  curl https://world.openfoodfacts.org/api/v0/product/0099482402891.json
 - Checkmark visual indicator that save was successful using crypto pattern
 - NavBar appearance in app.swift using crypto pattern
 
 - Save buttons only appear when data's been modified
 
 - Meat meal adjustments: Add delete capability (to both add/edit)
-- Fix issue wrt what meal adjustments are shown in IngredientAdd
 - BUG: Fix ing/adj so they don't serialize on each character typed
 - BUG: Disallow a duplicate named ingredient
 - Serialization MVVM sample project
