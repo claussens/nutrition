@@ -138,12 +138,55 @@ xcodebuild archive \
   ${AUTH_ARGS[@]+"${AUTH_ARGS[@]}"} \
   CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
 
-# Guard the failure this app is specifically prone to: an archive whose icon
-# was stripped still archives cleanly and is only rejected after upload.
-if ! ls "$ARCHIVE/Products/Applications/Nutrition.app" | grep -q "Assets.car"; then
+# ---------------------------------------------------------------------------
+# Archive guards
+# ---------------------------------------------------------------------------
+# Everything below fails ONLY after upload if it is not checked here: the
+# build is clean, the tests pass, and the app installs and runs on the phone.
+# Each of these has cost a real ship. Checking the archive itself — not the
+# sources that produced it — is the point; the archive is what Apple sees.
+APP_PATH="$ARCHIVE/Products/Applications/Nutrition.app"
+
+# 1. The app icon. An archive whose icon was stripped archives cleanly and is
+#    auto-rejected after upload.
+if ! ls "$APP_PATH" | grep -q "Assets.car"; then
   echo "error: the archived app has no Assets.car — the app icon was stripped." >&2
   echo "       Check that Assets.xcassets is NOT under 'Preview Content'." >&2
   exit 1
+fi
+
+# 2. The theme colours — a DIFFERENT failure from the icon. Both live in the
+#    same compiled catalogue, so an archive that lost every colorset still
+#    has an Assets.car and sails past the check above. The colorsets sat
+#    under "Preview Content" until 2026-09-06, stripped from every archive,
+#    while the phone build (a Release BUILD, never an archive) looked perfect.
+if [[ -x /usr/bin/assetutil ]]; then
+  CAR_NAMES="$(/usr/bin/assetutil --info "$APP_PATH/Assets.car" 2>/dev/null || true)"
+  for colour in BlueYellow BlackWhite Manual; do
+    if ! grep -q "\"$colour\"" <<<"$CAR_NAMES"; then
+      echo "error: the archived Assets.car has no '$colour' colorset." >&2
+      echo "       Theme colours must live in nutrition/Assets.xcassets. Under" >&2
+      echo "       'Preview Content' they are stripped from the archive only," >&2
+      echo "       so the app ships colourless and nothing local shows it." >&2
+      exit 1
+    fi
+  done
+fi
+
+# 3. The purpose strings the embedded entitlements make mandatory. Validation
+#    keys off the ENTITLEMENT, not the API calls, so "the app never writes to
+#    HealthKit" is not a reason for NSHealthUpdateUsageDescription to be
+#    missing. Removing it on exactly that reasoning failed an upload on
+#    2026-09-06, after a clean build and a green suite.
+if codesign -d --entitlements - --xml "$APP_PATH" 2>/dev/null | grep -q "com.apple.developer.healthkit"; then
+  for key in NSHealthShareUsageDescription NSHealthUpdateUsageDescription; do
+    if ! /usr/libexec/PlistBuddy -c "Print :$key" "$APP_PATH/Info.plist" >/dev/null 2>&1; then
+      echo "error: the archive carries the HealthKit entitlement but no $key." >&2
+      echo "       App Store validation rejects that at upload. Add" >&2
+      echo "       INFOPLIST_KEY_$key to project.yml." >&2
+      exit 1
+    fi
+  done
 fi
 
 if [[ $UPLOAD -eq 0 ]]; then

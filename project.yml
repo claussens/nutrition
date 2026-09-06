@@ -97,9 +97,24 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         # HealthStore.swift READS body mass, body fat % and active energy to
-        # fill in the profile. The app writes nothing to HealthKit, so there
-        # is no NSHealthUpdateUsageDescription.
+        # fill in the profile and writes nothing (it passes `toShare: nil`).
+        #
+        # BOTH purpose strings are nevertheless REQUIRED, and the Update one
+        # must not be deleted on the reasoning that the app never writes —
+        # that reasoning is about the code, and App Store validation is not.
+        # It keys off the ENTITLEMENT: the archive embeds
+        # com.apple.developer.healthkit, so an upload without this key is
+        # rejected with "Missing purpose string in Info.plist ... should
+        # contain a NSHealthUpdateUsageDescription key".
+        #
+        # Nothing local catches its absence. The Debug and Release builds are
+        # clean, the 96-test suite is green, and a devicectl install to the
+        # phone runs fine; only the upload fails, five minutes into a ship.
+        # Deleting it cost exactly that on 2026-09-06. scripts/testflight.sh
+        # now guards the archive for both keys so the next attempt fails in
+        # seconds instead.
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Nutrition reads your weight, body fat percentage and active energy from Health to set your daily calorie and macro goals."
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Nutrition does not save any data to Health."
         # ── The Mac (Mac Catalyst), added 2026-09-06 ───────────────────
         # The same target, one more destination — not a second target and not
         # an AppKit fork. It can be that small because the UI is all SwiftUI
